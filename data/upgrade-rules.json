@@ -1,0 +1,48 @@
+{
+  "version": "2026-09-11-v1",
+  "updatedAt": "2026-09-11",
+  "capabilities": {
+    "potentialResetCost": {
+      "label": "잠재 재설정 비용",
+      "status": "verified",
+      "usableForRecommendation": true,
+      "message": "착용 레벨과 현재 등급별 1회 메소 비용을 확인했습니다.",
+      "sources": ["https://maplestory.nexon.com/news/update/737", "https://maplestory.nexon.com/News/Update/746"]
+    },
+    "potentialTargetProbability": {
+      "label": "잠재 목표 옵션 확률",
+      "status": "partial",
+      "usableForRecommendation": false,
+      "message": "등급 확률은 확인했지만 부위별 목표 옵션 조합 확률 검증이 필요합니다.",
+      "sources": ["https://maplestory.nexon.com/Guide/OtherProbability/cube/black", "https://maplestory.nexon.com/Guide/OtherProbability/cube/addi"]
+    },
+    "starforceExpectedCost": {
+      "label": "스타포스 기대 비용",
+      "status": "unsupported",
+      "usableForRecommendation": false,
+      "message": "2026 개편 이후 전체 단계의 최종 확률과 비용 검증이 필요합니다.",
+      "sources": ["https://maplestory.nexon.com/news/update/799", "https://maplestory.nexon.com/Guide/N23GameInformation/Articles/412"]
+    },
+    "bossDamageModel": {
+      "label": "직업별 보스전 피해 모델",
+      "status": "unsupported",
+      "usableForRecommendation": false,
+      "message": "직업별 계산식과 솔로 보스 기준의 관리자 검증이 필요합니다.",
+      "sources": ["https://maplestory.nexon.com/Guide/N23GameInformation/Articles/390"]
+    }
+  },
+  "potentialResetCosts": {
+    "regular": [
+      { "minLevel": 1, "maxLevel": 159, "costs": { "rare": 4000000, "epic": 16000000, "unique": 34000000, "legendary": 40000000 } },
+      { "minLevel": 160, "maxLevel": 199, "costs": { "rare": 4250000, "epic": 17000000, "unique": 36125000, "legendary": 42500000 } },
+      { "minLevel": 200, "maxLevel": 249, "costs": { "rare": 4500000, "epic": 18000000, "unique": 38250000, "legendary": 45000000 } },
+      { "minLevel": 250, "maxLevel": 300, "costs": { "rare": 5000000, "epic": 20000000, "unique": 42500000, "legendary": 50000000 } }
+    ],
+    "additional": [
+      { "minLevel": 1, "maxLevel": 159, "costs": { "rare": 9750000, "epic": 27300000, "unique": 66300000, "legendary": 78000000 } },
+      { "minLevel": 160, "maxLevel": 199, "costs": { "rare": 10375000, "epic": 29050000, "unique": 70550000, "legendary": 83000000 } },
+      { "minLevel": 200, "maxLevel": 249, "costs": { "rare": 11000000, "epic": 30800000, "unique": 74800000, "legendary": 88000000 } },
+      { "minLevel": 250, "maxLevel": 300, "costs": { "rare": 12250000, "epic": 34300000, "unique": 83300000, "legendary": 98000000 } }
+    ]
+  }
+}
