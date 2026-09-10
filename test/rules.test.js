@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import request from 'supertest';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { loadUpgradeRules } from '../server/rules.js';
 import { createApp } from '../server/app.js';
 
@@ -31,5 +34,24 @@ test('upgrade rule endpoint returns a public status summary without secrets', as
     items: [],
   });
   assert.equal(recommendation.body.rulesVersion, rules.version);
+  assert.equal(recommendation.body.rulesUpdatedAt, rules.updatedAt);
   assert.deepEqual(recommendation.body.blockers, ['potentialTargetProbability', 'starforceExpectedCost', 'bossDamageModel']);
+  const unknownGoal = await request(app).post('/api/recommendations').send({
+    goalId: 'unknown', mode: 'all', budgetMesos: null, combat: { readiness: 'snapshot-ready' }, items: [],
+  });
+  assert.equal(unknownGoal.body.rulesVersion, rules.version);
+  assert.equal(unknownGoal.body.rulesUpdatedAt, rules.updatedAt);
+});
+
+test('verified potential cost bands must cover levels 1 through 300 exactly once', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'maple-rules-'));
+  const file = join(directory, 'rules.json');
+  try {
+    const source = JSON.parse(await readFile(new URL('../data/upgrade-rules.json', import.meta.url), 'utf8'));
+    source.potentialResetCosts.regular[1].minLevel = 159;
+    await writeFile(file, JSON.stringify(source));
+    await assert.rejects(loadUpgradeRules(file), /연속되어야 합니다/);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
 });

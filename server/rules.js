@@ -24,13 +24,23 @@ const bandSchema = z.object({
   maxLevel: z.number().int().max(300),
   costs: costsSchema,
 }).refine((band) => band.minLevel <= band.maxLevel, '레벨 구간이 올바르지 않습니다.');
+const bandsSchema = z.array(bandSchema).min(1).superRefine((bands, context) => {
+  if (bands[0]?.minLevel !== 1 || bands.at(-1)?.maxLevel !== 300) {
+    context.addIssue({ code: 'custom', message: '비용 레벨 구간은 1부터 300까지 포함해야 합니다.' });
+  }
+  for (let index = 1; index < bands.length; index++) {
+    if (bands[index].minLevel !== bands[index - 1].maxLevel + 1) {
+      context.addIssue({ code: 'custom', path: [index], message: '비용 레벨 구간은 중복이나 공백 없이 연속되어야 합니다.' });
+    }
+  }
+});
 const fileSchema = z.object({
   version: z.string().min(1),
   updatedAt: z.iso.date(),
   capabilities: z.record(z.string(), capabilitySchema),
   potentialResetCosts: z.object({
-    regular: z.array(bandSchema).min(1),
-    additional: z.array(bandSchema).min(1),
+    regular: bandsSchema,
+    additional: bandsSchema,
   }),
 });
 

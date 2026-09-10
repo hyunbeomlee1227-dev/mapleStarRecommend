@@ -1,7 +1,8 @@
 # 캐릭터 조회 기반
 
-Status: resolved
+Status: ready-for-human
 Type: task
+Progress: implementation-complete
 Depends on: 01
 
 ## 완료 기준

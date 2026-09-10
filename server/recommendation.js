@@ -30,15 +30,16 @@ function readableStarforce(value) {
 }
 
 export function buildRecommendationPlan({ goal, mode, budgetMesos, combat, items, rules }) {
+  const ruleTrace = { rulesVersion: rules?.version ?? null, rulesUpdatedAt: rules?.updatedAt ?? null };
   const coverage = {
     equipment: items.length,
     starforce: items.filter((item) => readableStarforce(item.starforce)).length,
     potential: items.filter((item) => Boolean(item.potential_option_grade)).length,
     additionalPotential: items.filter((item) => Boolean(item.additional_potential_option_grade)).length,
   };
-  if (!goal) return { status: 'unknown-goal', message: '지원하는 목표 보스를 선택해 주세요.', mode, budgetMesos, coverage, blockers: ['goal'] };
+  if (!goal) return { status: 'unknown-goal', message: '지원하는 목표 보스를 선택해 주세요.', mode, budgetMesos, coverage, blockers: ['goal'], ...ruleTrace };
   if (combat.readiness !== 'snapshot-ready') {
-    return { status: 'insufficient-data', message: combat.message || '보스전 비교에 필요한 능력치가 부족합니다.', mode, budgetMesos, coverage, blockers: ['combat-snapshot'] };
+    return { status: 'insufficient-data', message: combat.message || '보스전 비교에 필요한 능력치가 부족합니다.', mode, budgetMesos, coverage, blockers: ['combat-snapshot'], ...ruleTrace };
   }
   const blockers = rules
     ? Object.entries(rules.capabilities).filter(([, capability]) => !capability.usableForRecommendation).map(([id]) => id)
@@ -50,7 +51,7 @@ export function buildRecommendationPlan({ goal, mode, budgetMesos, combat, items
     budgetMesos,
     coverage,
     blockers,
-    rulesVersion: rules?.version ?? null,
+    ...ruleTrace,
     goal: { id: goal.id, boss: goal.boss, difficulty: goal.difficulty },
   };
 }
