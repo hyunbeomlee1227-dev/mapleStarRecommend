@@ -17,6 +17,19 @@ const fixture = `
   <table class="cube_data _2"><tbody><tr><td>STR +9%</td><td>7.1429%</td></tr></tbody></table>
   <table class="cube_data _3"><tbody><tr><td>올스탯 +6%</td><td>6.7857%</td></tr></tbody></table>`;
 
+const lowerGradeFixture = `
+  <div class="cube_option"><ul>
+    <li>잠재능력 등급<span id="searchGrade">유니크</span></li>
+    <li>장비 분류<span id="searchPartsType">장갑</span></li>
+    <li>장비 레벨<span id="searchReqLev">120~200</span></li>
+  </ul></div>
+  <table class="cube_data _1"><tbody>
+    <tr><td>STR +9%</td><td>7.1429%</td></tr>
+    <tr><td>DEX +9%</td><td>7.1429%</td></tr>
+  </tbody></table>
+  <table class="cube_data _2"><tbody><tr><td>STR +6%</td><td>7%</td></tr></tbody></table>
+  <table class="cube_data _3"><tbody><tr><td>최대 HP +6%</td><td>7%</td></tr></tbody></table>`;
+
 test('official potential option HTML is normalized into three probability lines', () => {
   assert.deepEqual(parsePotentialOptionsHtml(fixture), {
     grade: '레전드리',
@@ -62,6 +75,51 @@ test('potential options proxy limits client requests', async () => {
   const limited = await request(app).get(query.replace('level=200', 'level=201'));
   assert.equal(limited.status, 429);
   assert.equal(limited.body.code, 'RATE_LIMIT');
+});
+
+test('potential line grades compare each option with the immediately lower tier', async () => {
+  const calls = [];
+  const service = createPotentialOptionsService({ fetchImpl: async (_url, options) => {
+    calls.push(String(options.body));
+    return new Response(lowerGradeFixture);
+  } });
+
+  const grades = await service.classifyLines({
+    type: 'regular', grade: 'legendary', part: 'gloves', level: 200,
+    options: ['크리티컬 데미지 : +8%', 'STR : +9%', 'DEX +9%'],
+  });
+  assert.deepEqual(grades, ['legendary', 'unique', 'unique']);
+  assert.equal(calls.length, 1);
+  assert.match(calls[0], /nGrade=3/);
+
+  const rareGrades = await service.classifyLines({
+    type: 'regular', grade: 'rare', part: 'gloves', level: 200,
+    options: ['STR : +3%'],
+  });
+  assert.deepEqual(rareGrades, ['rare']);
+  assert.equal(calls.length, 1);
+});
+
+test('potential line grade endpoint validates input and shares the proxy rate limit', async () => {
+  const potentialOptions = { classifyLines: async () => ['unique', 'epic'] };
+  const app = createApp({
+    service: { configured: false, lookup() {} }, potentialOptions,
+    potentialOptionsPerMinute: 1, now: () => 1000,
+  });
+  const body = { type: 'regular', grade: 'unique', part: 'gloves', level: 200, options: ['STR : +9%', 'STR : +6%'] };
+
+  const valid = await request(app).post('/api/rules/potential-line-grades').send(body);
+  assert.equal(valid.status, 200);
+  assert.deepEqual(valid.body.grades, ['unique', 'epic']);
+
+  const limited = await request(app).post('/api/rules/potential-line-grades').send(body);
+  assert.equal(limited.status, 429);
+  assert.equal(limited.body.code, 'RATE_LIMIT');
+
+  const invalidApp = createApp({ service: { configured: false, lookup() {} }, potentialOptions });
+  const invalid = await request(invalidApp).post('/api/rules/potential-line-grades').send({ ...body, options: [] });
+  assert.equal(invalid.status, 400);
+  assert.equal(invalid.body.code, 'INVALID_POTENTIAL_LINE_INPUT');
 });
 
 test('official lookup maps query codes, caches responses and reports upstream failures', async () => {

@@ -5,6 +5,7 @@ const ENDPOINT = 'https://maplestory.nexon.com/Guide/OtherProbability/cube/GetSe
 const cubeIds = { regular: '5062010', additional: '5062500' };
 const grades = { rare: '1', epic: '2', unique: '3', legendary: '4' };
 const gradeLabels = { rare: '레어', epic: '에픽', unique: '유니크', legendary: '레전드리' };
+const lowerGrades = { legendary: 'unique', unique: 'epic', epic: 'rare' };
 const parts = {
   weapon: '1', emblem: '2', secondary: '3', forceShield: '4', shield: '5', hat: '6', top: '7', overall: '8', bottom: '9', shoes: '10', gloves: '11', cape: '12', belt: '13', shoulder: '14', face: '15', eye: '16', earrings: '17', ring: '18', pendant: '19', heart: '20',
 };
@@ -24,6 +25,9 @@ export const potentialOptionsQuerySchema = z.object({
   part: z.enum(Object.keys(parts)),
   level: z.coerce.number().int().min(0).max(250),
 });
+export const potentialLineGradesSchema = potentialOptionsQuerySchema.extend({
+  options: z.array(z.string().min(1).max(500)).min(1).max(3),
+});
 
 export class PotentialOptionsError extends Error {
   constructor(code, message, status = 502) {
@@ -31,6 +35,10 @@ export class PotentialOptionsError extends Error {
     this.code = code;
     this.status = status;
   }
+}
+
+function normalizedOption(option) {
+  return String(option ?? '').replace(/\s*:\s*/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
 export function parsePotentialOptionsHtml(html) {
@@ -91,19 +99,27 @@ export function createPotentialOptionsService({ fetchImpl = fetch, now = Date.no
       : 'https://maplestory.nexon.com/Guide/OtherProbability/cube/addi', cached: false };
   }
 
-  return {
-    async lookup(input) {
-      const key = `${input.type}:${input.grade}:${input.part}:${input.level}`;
-      const cached = cache.get(key);
-      if (cached && now() - cached.savedAt < cacheMs) return { ...cached.value, cached: true };
-      if (inFlight.has(key)) return inFlight.get(key);
-      const pending = load(input).then((value) => {
-        if (cache.size >= 500) cache.delete(cache.keys().next().value);
-        cache.set(key, { value, savedAt: now() });
-        return value;
-      }).finally(() => inFlight.delete(key));
-      inFlight.set(key, pending);
-      return pending;
-    },
-  };
+  async function lookup(input) {
+    const key = `${input.type}:${input.grade}:${input.part}:${input.level}`;
+    const cached = cache.get(key);
+    if (cached && now() - cached.savedAt < cacheMs) return { ...cached.value, cached: true };
+    if (inFlight.has(key)) return inFlight.get(key);
+    const pending = load(input).then((value) => {
+      if (cache.size >= 500) cache.delete(cache.keys().next().value);
+      cache.set(key, { value, savedAt: now() });
+      return value;
+    }).finally(() => inFlight.delete(key));
+    inFlight.set(key, pending);
+    return pending;
+  }
+
+  async function classifyLines(input) {
+    if (!lowerGrades[input.grade]) return input.options.map(() => input.grade);
+    const lowerGrade = lowerGrades[input.grade];
+    const lower = await lookup({ type: input.type, grade: lowerGrade, part: input.part, level: input.level });
+    const lowerOptions = new Set((lower.lines[0] ?? []).map(({ option }) => normalizedOption(option)));
+    return input.options.map((option) => lowerOptions.has(normalizedOption(option)) ? lowerGrade : input.grade);
+  }
+
+  return { lookup, classifyLines };
 }

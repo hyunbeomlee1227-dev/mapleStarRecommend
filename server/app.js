@@ -2,7 +2,7 @@ import express from 'express';
 import { LookupError } from './nexon.js';
 import { assessGoal } from './combat.js';
 import { buildRecommendationPlan, recommendationRequestSchema } from './recommendation.js';
-import { PotentialOptionsError, potentialOptionsQuerySchema } from './potential-options.js';
+import { PotentialOptionsError, potentialLineGradesSchema, potentialOptionsQuerySchema } from './potential-options.js';
 
 export function createApp({ service, potentialOptions = null, goals = { goals: [], defaultGoalId: null }, equipmentTargets = { version: null, updatedAt: null, rules: [] }, rules = { version: null, updatedAt: null, capabilities: {}, potentialResetCosts: { regular: [], additional: [] }, potentialTierUpgrades: { regular: {}, additional: {} }, starforceOutcomes: {}, starforceCostModel: null, summary: { verified: 0, partial: 0, unsupported: 0, total: 0 } }, perMinute = 12, potentialOptionsPerMinute = 30, now = Date.now }) {
   const app = express();
@@ -17,20 +17,38 @@ export function createApp({ service, potentialOptions = null, goals = { goals: [
   app.get('/api/status', (_req, res) => res.json({ configured: service.configured, recommendation: 'unverified' }));
   app.get('/api/goals', (_req, res) => res.json(goals));
   app.get('/api/rules', (_req, res) => res.json(rules));
-  app.get('/api/rules/potential-options', async (req, res) => {
-    const parsed = potentialOptionsQuerySchema.safeParse(req.query);
-    if (!parsed.success) return res.status(400).json({ code: 'INVALID_POTENTIAL_OPTION_INPUT', message: parsed.error.issues[0]?.message || '잠재 옵션 검색 조건을 확인해 주세요.' });
-    if (!potentialOptions) return res.status(503).json({ code: 'POTENTIAL_OPTIONS_UNAVAILABLE', message: '공식 잠재 옵션 조회가 준비되지 않았습니다.' });
+
+  function reservePotentialLookup(req, res) {
     const time = now();
     for (const [ip, entry] of potentialClients) if (entry.until <= time) potentialClients.delete(ip);
     const current = potentialClients.get(req.ip) ?? { count: 0, until: time + 60000 };
     if (current.count >= potentialOptionsPerMinute || (!potentialClients.has(req.ip) && potentialClients.size >= 10000)) {
       res.set('Retry-After', '60');
-      return res.status(429).json({ code: 'RATE_LIMIT', message: '공식 잠재 옵션 조회가 많습니다. 1분 후 다시 시도해 주세요.' });
+      res.status(429).json({ code: 'RATE_LIMIT', message: '공식 잠재 옵션 조회가 많습니다. 1분 후 다시 시도해 주세요.' });
+      return false;
     }
     current.count++;
     potentialClients.set(req.ip, current);
+    return true;
+  }
+
+  app.get('/api/rules/potential-options', async (req, res) => {
+    const parsed = potentialOptionsQuerySchema.safeParse(req.query);
+    if (!parsed.success) return res.status(400).json({ code: 'INVALID_POTENTIAL_OPTION_INPUT', message: parsed.error.issues[0]?.message || '잠재 옵션 검색 조건을 확인해 주세요.' });
+    if (!potentialOptions) return res.status(503).json({ code: 'POTENTIAL_OPTIONS_UNAVAILABLE', message: '공식 잠재 옵션 조회가 준비되지 않았습니다.' });
+    if (!reservePotentialLookup(req, res)) return;
     try { return res.json(await potentialOptions.lookup(parsed.data)); }
+    catch (error) {
+      if (error instanceof PotentialOptionsError) return res.status(error.status).json({ code: error.code, message: error.message });
+      return res.status(502).json({ code: 'OFFICIAL_SOURCE_UNAVAILABLE', message: '공식 잠재 옵션 정보를 불러오지 못했습니다.' });
+    }
+  });
+  app.post('/api/rules/potential-line-grades', express.json({ limit: '8kb' }), async (req, res) => {
+    const parsed = potentialLineGradesSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ code: 'INVALID_POTENTIAL_LINE_INPUT', message: parsed.error.issues[0]?.message || '잠재 옵션 판별 조건을 확인해 주세요.' });
+    if (!potentialOptions) return res.status(503).json({ code: 'POTENTIAL_OPTIONS_UNAVAILABLE', message: '공식 잠재 옵션 조회가 준비되지 않았습니다.' });
+    if (!reservePotentialLookup(req, res)) return;
+    try { return res.json({ grades: await potentialOptions.classifyLines(parsed.data) }); }
     catch (error) {
       if (error instanceof PotentialOptionsError) return res.status(error.status).json({ code: error.code, message: error.message });
       return res.status(502).json({ code: 'OFFICIAL_SOURCE_UNAVAILABLE', message: '공식 잠재 옵션 정보를 불러오지 못했습니다.' });

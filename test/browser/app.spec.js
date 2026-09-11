@@ -37,6 +37,9 @@ test('equipment browsing, filters, detail and status remain usable', async ({ pa
   await expect(detail.locator('.potential-marker').nth(1)).toHaveText('E');
   expect(await detail.locator('.potential-unique .potential-marker').evaluate((element) => getComputedStyle(element).backgroundColor)).toBe('rgb(255, 209, 43)');
   expect(await detail.locator('.potential-epic .potential-marker').evaluate((element) => getComputedStyle(element).backgroundColor)).toBe('rgb(182, 124, 255)');
+  await expect(detail.locator('.potential-unique li')).toHaveClass([/potential-line-unique/, /potential-line-epic/, /potential-line-epic/]);
+  await expect(detail.locator('.potential-epic li')).toHaveClass([/potential-line-epic/, /potential-line-rare/, /potential-line-rare/]);
+  expect(await detail.locator('.potential-line-rare').first().evaluate((element) => getComputedStyle(element, '::before').backgroundColor)).toBe('rgb(102, 191, 255)');
   expect(await detail.locator('.equipment-tooltip').evaluate((element) => getComputedStyle(element).backgroundColor)).toBe('rgb(36, 38, 45)');
   if (info.project.name === 'mobile') await page.getByLabel('장비 상세 닫기').click();
   else await expect(detail.locator('h3')).toHaveText('에스텔라 이어링 (+8)');
@@ -82,7 +85,8 @@ test('boss equipment goals are shown for the selected solo boss range', async ({
   await expect(page.getByText('에스텔라 이어링', { exact: true }).last()).toBeVisible();
   await expect(page.getByText('스타포스 17성 -> 22성', { exact: true })).toBeVisible();
   await page.getByLabel('난이도', { exact: true }).selectOption('lotus-extreme');
-  await expect(page.getByText('이 보스 구간에 등록된 장비 목표가 없습니다.')).toBeVisible();
+  await expect(page.getByText('아케인셰이드 투핸드소드', { exact: true }).last()).toBeVisible();
+  await expect(page.getByText('스타포스 18성 -> 22성', { exact: true }).first()).toBeVisible();
   await expect(page.getByText('관리자 기준', { exact: true })).toHaveCount(0);
 });
 

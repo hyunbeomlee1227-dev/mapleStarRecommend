@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ArrowUpRight, Gem, Shield, Star, Swords } from 'lucide-react';
-import { canLookupPotentialOptions } from './PotentialOptionsDialog';
+import { canLookupPotentialOptions, potentialQueryFor } from './PotentialOptionsDialog';
 import { supportsStarforce } from '../shared/equipment';
 
 const statLabels = {
@@ -25,6 +25,41 @@ const potentialGrades = {
   '에픽': { slug: 'epic', marker: 'E' },
   '레어': { slug: 'rare', marker: 'R' },
 };
+const lineGradeLabels = { legendary: '레전드리', unique: '유니크', epic: '에픽', rare: '레어' };
+const lineGradeCache = new Map();
+
+function potentialOptions(item, additional) {
+  const prefix = additional ? 'additional_' : '';
+  return [1, 2, 3].map((index) => item[`${prefix}potential_option_${index}`]).filter(Boolean);
+}
+
+function fetchLineGrades(item, type) {
+  const additional = type === 'additional';
+  const embedded = item[additional ? 'additional_potential_line_grades' : 'potential_line_grades'];
+  if (Array.isArray(embedded)) return Promise.resolve(embedded);
+  const query = potentialQueryFor(item, type);
+  const options = potentialOptions(item, additional);
+  if (!query || !options.length) return Promise.resolve([]);
+  const body = { ...query, options };
+  const key = JSON.stringify(body);
+  if (!lineGradeCache.has(key)) {
+    const pending = fetch('/api/rules/potential-line-grades', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: key,
+    }).then(async (response) => {
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message);
+      return result.grades;
+    }).catch((error) => {
+      lineGradeCache.delete(key);
+      throw error;
+    });
+    if (lineGradeCache.size >= 200) lineGradeCache.delete(lineGradeCache.keys().next().value);
+    lineGradeCache.set(key, pending);
+  }
+  return lineGradeCache.get(key);
+}
 
 function numberValue(value) {
   if (value === null || value === undefined || value === '') return null;
@@ -67,14 +102,17 @@ function StatBreakdown({ item }) {
   })}</dl>;
 }
 
-function PotentialBlock({ item, additional = false }) {
+function PotentialBlock({ item, additional = false, lineGrades = [] }) {
   const prefix = additional ? 'additional_' : '';
   const grade = item[`${prefix}potential_option_grade`];
   if (!grade) return null;
-  const options = [1, 2, 3].map((index) => item[`${prefix}potential_option_${index}`]).filter(Boolean);
+  const options = potentialOptions(item, additional);
   const title = additional ? '에디셔널 잠재능력' : '잠재능력';
   const meta = potentialGrades[grade] || { slug: 'unknown', marker: '?' };
-  return <section className={`tooltip-potential potential-${meta.slug}`}><h4 aria-label={title}><span className="potential-marker" aria-hidden="true">{meta.marker}</span>{title} : <strong>{grade}</strong></h4><ul>{options.map((option, index) => <li key={index}>{String(option).replace(/\s*:\s*/, ' ')}</li>)}</ul></section>;
+  return <section className={`tooltip-potential potential-${meta.slug}`}><h4 aria-label={title}><span className="potential-marker" aria-hidden="true">{meta.marker}</span>{title} : <strong>{grade}</strong></h4><ul>{options.map((option, index) => {
+    const lineGrade = lineGrades[index] || 'unknown';
+    return <li className={`potential-line-${lineGrade}`} title={lineGradeLabels[lineGrade] ? `${lineGradeLabels[lineGrade]} 옵션` : undefined} key={index}>{String(option).replace(/\s*:\s*/, ' ')}</li>;
+  })}</ul></section>;
 }
 
 function ScrollResult({ values }) {
@@ -84,6 +122,19 @@ function ScrollResult({ values }) {
 }
 
 export default function EquipmentTooltip({ item, characterJob, onOpenPotentialOptions }) {
+  const [lineGrades, setLineGrades] = useState({ regular: [], additional: [] });
+  useEffect(() => {
+    let active = true;
+    setLineGrades({ regular: [], additional: [] });
+    Promise.allSettled([fetchLineGrades(item, 'regular'), fetchLineGrades(item, 'additional')]).then(([regular, additional]) => {
+      if (!active) return;
+      setLineGrades({
+        regular: regular.status === 'fulfilled' ? regular.value : [],
+        additional: additional.status === 'fulfilled' ? additional.value : [],
+      });
+    });
+    return () => { active = false; };
+  }, [item]);
   const stars = supportsStarforce(item) ? Number(item.starforce) || 0 : 0;
   const upgrades = Number(item.scroll_upgrade) || 0;
   const level = numberValue(item.item_total_option?.base_equipment_level ?? item.item_base_option?.base_equipment_level);
@@ -105,8 +156,8 @@ export default function EquipmentTooltip({ item, characterJob, onOpenPotentialOp
     <section className="tooltip-section tooltip-stat-section"><StatBreakdown item={item} /></section>
     {(upgrades > 0 || remaining !== null || resilience !== null) && <section className="tooltip-section tooltip-upgrade"><div><strong>주문서 강화 {upgrades}회</strong><span>(잔여 {remaining ?? 0}회, 복구 가능 {resilience ?? 0}회)</span></div>{item.golden_hammer_flag && <small>황금 망치 {item.golden_hammer_flag}</small>}<ScrollResult values={item.item_etc_option} /></section>}
     {(item.growth_level || item.soul_name) && <section className="tooltip-section tooltip-extra">{item.growth_level ? <p>성장 레벨 <strong>{item.growth_level}</strong>{item.growth_exp != null && <span> · 경험치 {Number(item.growth_exp).toLocaleString('ko-KR')}</span>}</p> : null}{item.soul_name && <p>{item.soul_name} · {item.soul_option || '소울 옵션 정보 없음'}</p>}</section>}
-    <PotentialBlock item={item} />
-    <PotentialBlock item={item} additional />
+    <PotentialBlock item={item} lineGrades={lineGrades.regular} />
+    <PotentialBlock item={item} additional lineGrades={lineGrades.additional} />
     <button className="tooltip-official-options" disabled={!canLookupPotentialOptions(item)} onClick={onOpenPotentialOptions}>공식 잠재 옵션표 보기<ArrowUpRight size={13} /></button>
   </article>;
 }

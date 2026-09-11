@@ -6,25 +6,25 @@ const partSlugs = {
   무기: 'weapon', 엠블렘: 'emblem', 방패: 'shield', 모자: 'hat', 상의: 'top', 한벌옷: 'overall', 하의: 'bottom', 신발: 'shoes', 장갑: 'gloves', 망토: 'cape', 벨트: 'belt', 어깨장식: 'shoulder', 얼굴장식: 'face', 눈장식: 'eye', 귀고리: 'earrings', 반지: 'ring', 펜던트: 'pendant', 기계심장: 'heart', '기계 심장': 'heart',
 };
 
-function queryFor(item, type) {
+export function potentialQueryFor(item, type) {
   const grade = gradeSlugs[type === 'regular' ? item?.potential_option_grade : item?.additional_potential_option_grade];
   const equipmentPart = item?.item_equipment_part?.replace(/\d+$/, '');
   let part = partSlugs[equipmentPart];
-  if (equipmentPart === '보조무기') part = /포스실드|소울링/.test(`${item.item_name} ${item.item_equipment_slot}`) ? 'forceShield' : 'secondary';
+  if (equipmentPart === '보조무기' || item?.item_equipment_slot === '보조무기') part = /포스실드|소울링/.test(`${item.item_name} ${item.item_equipment_slot}`) ? 'forceShield' : 'secondary';
   const level = Number(item?.item_total_option?.base_equipment_level ?? item?.item_base_option?.base_equipment_level);
   return grade && part && Number.isInteger(level) && level >= 0 && level <= 250 ? { type, grade, part, level } : null;
 }
 
 export function canLookupPotentialOptions(item) {
-  return Boolean(queryFor(item, 'regular') || queryFor(item, 'additional'));
+  return Boolean(potentialQueryFor(item, 'regular') || potentialQueryFor(item, 'additional'));
 }
 
 export default function PotentialOptionsDialog({ item, open, onClose }) {
   const dialogRef = useRef(null);
   const [type, setType] = useState('regular');
   const [result, setResult] = useState({ status: 'idle' });
-  const regularAvailable = Boolean(queryFor(item, 'regular'));
-  const additionalAvailable = Boolean(queryFor(item, 'additional'));
+  const regularAvailable = Boolean(potentialQueryFor(item, 'regular'));
+  const additionalAvailable = Boolean(potentialQueryFor(item, 'additional'));
 
   useEffect(() => {
     if (!open) return;
@@ -34,7 +34,7 @@ export default function PotentialOptionsDialog({ item, open, onClose }) {
 
   useEffect(() => {
     if (!open) return;
-    const query = queryFor(item, type);
+    const query = potentialQueryFor(item, type);
     if (!query) {
       setResult({ status: 'error', message: '이 장비의 부위, 레벨 또는 잠재 등급을 확인할 수 없습니다.' });
       return;
