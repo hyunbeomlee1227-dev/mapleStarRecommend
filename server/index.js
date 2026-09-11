@@ -5,6 +5,7 @@ import { createApp } from './app.js';
 import { createNexonService } from './nexon.js';
 import { loadGoals } from './goals.js';
 import { loadUpgradeRules } from './rules.js';
+import { createPotentialOptionsService } from './potential-options.js';
 
 const production = process.argv.includes('--production');
 function integer(name, fallback, minimum = 1) {
@@ -20,7 +21,8 @@ const service = createNexonService({
 });
 const goals = await loadGoals();
 const rules = await loadUpgradeRules();
-const app = createApp({ service, goals, rules, perMinute: integer('LOOKUP_LIMIT_PER_MINUTE', 12) });
+const potentialOptions = createPotentialOptionsService();
+const app = createApp({ service, potentialOptions, goals, rules, perMinute: integer('LOOKUP_LIMIT_PER_MINUTE', 12), potentialOptionsPerMinute: integer('POTENTIAL_OPTIONS_LIMIT_PER_MINUTE', 30) });
 const server = createServer(app);
 let vite;
 if (production) {

@@ -3,10 +3,13 @@ import { createRoot } from 'react-dom/client';
 import { Search, Star, ArrowUpRight, ArrowUpDown, ChevronRight, X, Trash2, CircleHelp, Layers3, Swords, Shield, Gem, Clock3, SlidersHorizontal, Check, AlertCircle, LoaderCircle, FlaskConical, Target } from 'lucide-react';
 import { demo } from './demo';
 import { readRecent, saveRecent, clearRecent } from './storage';
+import PotentialOptionsDialog, { canLookupPotentialOptions } from './PotentialOptionsDialog';
 import './style.css';
 
 const grades = { 레전드리: 'legendary', 유니크: 'unique', 에픽: 'epic', 레어: 'rare' };
+const gradeNames = { legendary: '레전드리', unique: '유니크', epic: '에픽', rare: '레어' };
 const labels = { str: 'STR', dex: 'DEX', int: 'INT', luk: 'LUK', attack_power: '공격력', magic_power: '마력', max_hp: '최대 HP', max_mp: '최대 MP', all_stat: '올스탯 (%)', boss_damage: '보스 데미지 (%)', ignore_monster_armor: '방어율 무시 (%)', damage: '데미지 (%)', armor: '방어력', speed: '이동속도', jump: '점프력', equipment_level_decrease: '착용 레벨 감소', base_equipment_level: '기본 착용 레벨' };
+const mesos = new Intl.NumberFormat('ko-KR');
 function Badge({ grade }) { return <span className={`grade ${grades[grade] || ''}`}>{grade || '정보 없음'}</span>; }
 function EquipmentIcon({ item }) {
   const [failed, setFailed] = useState(false);
@@ -37,6 +40,8 @@ function App() {
   const [budget, setBudget] = useState('');
   const [recommendation, setRecommendation] = useState({ status: 'loading', message: '추천 조건을 준비하는 중입니다.' });
   const [rules, setRules] = useState({ version: null, updatedAt: null, capabilities: {}, summary: { verified: 0, total: 0 } });
+  const [potentialOptionsOpen, setPotentialOptionsOpen] = useState(false);
+  const [potentialReturnToDetail, setPotentialReturnToDetail] = useState(false);
   const abort = useRef(null);
   const helpRef = useRef(null);
   const detailRef = useRef(null);
@@ -80,7 +85,15 @@ function App() {
     }
     const controller = new AbortController();
     setRecommendation({ status: 'loading', message: '강화 후보를 확인하는 중입니다.' });
-    const items = data.items.map(({ item_name, item_equipment_slot, starforce, potential_option_grade, additional_potential_option_grade }) => ({ item_name, item_equipment_slot, starforce, potential_option_grade, additional_potential_option_grade }));
+    const items = data.items.map(({ item_name, item_equipment_slot, item_equipment_part, item_total_option, item_base_option, starforce, potential_option_grade, additional_potential_option_grade }) => ({
+      item_name,
+      item_equipment_slot,
+      item_equipment_part,
+      baseEquipmentLevel: Number(item_total_option?.base_equipment_level ?? item_base_option?.base_equipment_level) || null,
+      starforce,
+      potential_option_grade,
+      additional_potential_option_grade,
+    }));
     fetch('/api/recommendations', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ goalId, mode: recommendationMode, budgetMesos, combat: data.combat, items }), signal: controller.signal })
       .then(async (response) => { const result = await response.json(); if (!response.ok) throw new Error(result.message); return result; })
       .then(setRecommendation)
@@ -116,15 +129,27 @@ function App() {
   const selectedGoal = goals.goals.find((goal) => goal.id === goalId);
   const bosses = [...new Set(goals.goals.map((goal) => goal.boss))];
   const difficultyGoals = goals.goals.filter((goal) => goal.boss === selectedGoal?.boss);
+  const tierCandidates = recommendation.supportedCalculations?.potentialTierUpgrades ?? [];
+  const starforceRisks = recommendation.supportedCalculations?.starforceRisks ?? [];
   function selectBoss(boss) {
     const candidates = goals.goals.filter((goal) => goal.boss === boss);
     const matchingDifficulty = candidates.find((goal) => goal.difficulty === selectedGoal?.difficulty);
     setGoalId((matchingDifficulty ?? candidates.at(-1))?.id ?? '');
   }
+  function openPotentialOptions() {
+    setPotentialReturnToDetail(mobileDetail);
+    if (mobileDetail) setMobileDetail(false);
+    setPotentialOptionsOpen(true);
+  }
+  function closePotentialOptions() {
+    setPotentialOptionsOpen(false);
+    if (potentialReturnToDetail) setMobileDetail(true);
+    setPotentialReturnToDetail(false);
+  }
   const detail = selected ? <>
     <div className="detail-title"><span>장비 상세</span><span className="muted">{selected.item_equipment_slot}</span></div>
     <div className="selected-item"><EquipmentIcon item={selected} /><h3>{selected.item_name}</h3><span className="star-value"><Star size={14} fill="currentColor" /> {selected.starforce ?? '?'}성</span></div>
-    <section className="detail-section"><div className="section-title"><h4>잠재능력</h4><Badge grade={selected.potential_option_grade} /></div><OptionLines item={selected} /></section>
+    <section className="detail-section"><div className="section-title"><h4>잠재능력</h4><Badge grade={selected.potential_option_grade} /></div><OptionLines item={selected} /><button className="official-options-button" disabled={!canLookupPotentialOptions(selected)} onClick={openPotentialOptions}>공식 잠재 옵션표 보기<ArrowUpRight size={13} /></button></section>
     <section className="detail-section"><div className="section-title"><h4>에디셔널 잠재능력</h4><Badge grade={selected.additional_potential_option_grade} /></div><OptionLines item={selected} additional /></section>
     <section className="detail-section"><h4>장비 옵션</h4><dl className="stat-list">{Object.entries(selected.item_total_option || {}).filter(([, value]) => value !== '0' && value != null).map(([key, value]) => <div key={key}><dt>{labels[key] || key}</dt><dd>{value}</dd></div>)}</dl>{!selected.item_total_option && <p className="muted">옵션 정보가 없습니다.</p>}</section>
     <details className="breakdown"><summary>추가옵션 · 스타포스 상세</summary>{[['추가옵션', selected.item_add_option], ['스타포스 증가량', selected.item_starforce_option]].map(([title, entries]) => <div key={title}><h4>{title}</h4><dl className="stat-list">{Object.entries(entries || {}).filter(([, value]) => value !== '0' && value != null).map(([key, value]) => <div key={key}><dt>{labels[key] || key}</dt><dd>{value}</dd></div>)}</dl>{!entries && <p className="muted">정보 없음</p>}</div>)}</details>
@@ -143,12 +168,15 @@ function App() {
       <div className="content-grid"><section className="main-panel" role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`}>
       {tab === 'equipment' ? <><div className="table-toolbar"><label className="filter"><Search size={16} /><input aria-label="장비 검색" placeholder="장비명 또는 부위 검색" value={filter} onChange={(event) => setFilter(event.target.value)} /></label><div className="table-controls"><select aria-label="잠재능력 등급 필터" value={grade} onChange={(event) => setGrade(event.target.value)}><option value="all">모든 잠재 등급</option>{Object.keys(grades).map((g) => <option key={g}>{g}</option>)}</select><button className="sort" title={sort === 'slot' ? '스타포스 높은 순 정렬' : '장비 순서로 정렬'} onClick={() => setSort(sort === 'slot' ? 'stars' : 'slot')}><ArrowUpDown size={14} />{sort === 'slot' ? '기본순' : '스타포스순'}</button></div></div><div className="equipment-table"><div className="table-head"><span>장비</span><span>스타포스</span><span>잠재능력</span><span>에디셔널</span><span /></div>{items.map((item) => <button className={`item-row ${selected?.item_equipment_slot === item.item_equipment_slot ? 'selected' : ''}`} key={item.item_equipment_slot} onClick={() => { setSelected(item); if (matchMedia('(max-width: 1000px)').matches) setMobileDetail(true); }} aria-label={`${item.item_name} 상세 보기`}><span className="item-identity"><EquipmentIcon item={item} /><span><small>{item.item_equipment_slot}</small><strong>{item.item_name}</strong></span></span><span className="star-value"><Star size={12} fill="currentColor" />{item.starforce ?? '?'}</span><Badge grade={item.potential_option_grade} /><Badge grade={item.additional_potential_option_grade} /><ChevronRight size={15} className="row-arrow" /></button>)}</div>{items.length === 0 && <div className="empty"><Search size={28} /><h3>표시할 장비가 없습니다</h3><p>검색어와 등급 필터를 확인해 주세요.</p><button className="text-button" onClick={() => { setFilter(''); setGrade('all'); }}>필터 초기화</button></div>}<div className="table-footer">{items.length}개 장비 표시 <span>잠재능력 상세는 장비를 선택해 확인</span></div></> : tab === 'stats' ? <div className="data-panel"><h3>캐릭터 능력치</h3><dl className="full-stats">{data.stats.map((stat) => <div key={stat.stat_name}><dt>{stat.stat_name}</dt><dd>{stat.stat_value}</dd></div>)}</dl>{!data.stats.length && <p>조회된 능력치가 없습니다.</p>}</div> : <div className="data-panel"><h3>적용 중인 세트 효과</h3>{data.sets.map((set) => <section className="set-row" key={set.set_name}><div><h4>{set.set_name}</h4><span className="grade">{set.total_set_count}세트</span></div>{set.set_effect_info.map((effect, index) => <p key={index}><Check size={14} />{effect.set_count}세트 · {effect.set_option}</p>)}</section>)}{!data.sets.length && <p>적용 중인 세트 효과가 없습니다.</p>}</div>}
       </section><aside className="details-panel">{detail}</aside></div>
-      <section className="recommendation-status" aria-label="강화 추천 조건"><div className="recommendation-heading"><div className="status-icon"><SlidersHorizontal size={21} /></div><div><h3>{selectedGoal ? `${selectedGoal.boss} ${selectedGoal.difficulty} 기준 강화 우선순위` : '강화 우선순위'}</h3><p>{assessment.message}</p><p className="model-message">{recommendation.message}</p></div></div><div className="recommendation-inputs"><div className="mode-control" role="group" aria-label="추천 범위"><button className={recommendationMode === 'all' ? 'active' : ''} aria-pressed={recommendationMode === 'all'} onClick={() => setRecommendationMode('all')}>전체 추천</button><button className={recommendationMode === 'budget' ? 'active' : ''} aria-pressed={recommendationMode === 'budget'} onClick={() => setRecommendationMode('budget')}>예산 내 추천</button></div>{recommendationMode === 'budget' && <label className="budget-input"><span>예산</span><input aria-label="예산 (억 메소)" type="number" min="0.1" max="90000000" step="0.1" inputMode="decimal" value={budget} onChange={(event) => setBudget(event.target.value)} /><span>억 메소</span></label>}</div>{recommendation.coverage && <div className="coverage" aria-label="분석 가능 장비"><span>스타포스 {recommendation.coverage.starforce}</span><span>잠재 {recommendation.coverage.potential}</span><span>에디셔널 {recommendation.coverage.additionalPotential}</span></div>}<span className="pending-badge">{recommendation.status === 'loading' ? '확인 중' : '추천 미제공'}</span></section>
+      <section className="recommendation-status" aria-label="강화 추천 조건"><div className="recommendation-heading"><div className="status-icon"><SlidersHorizontal size={21} /></div><div><h3>{selectedGoal ? `${selectedGoal.boss} ${selectedGoal.difficulty} 기준 강화 우선순위` : '강화 우선순위'}</h3><p>{assessment.message}</p><p className="model-message">{recommendation.message}</p></div></div><div className="recommendation-inputs"><div className="mode-control" role="group" aria-label="추천 범위"><button className={recommendationMode === 'all' ? 'active' : ''} aria-pressed={recommendationMode === 'all'} onClick={() => setRecommendationMode('all')}>전체 추천</button><button className={recommendationMode === 'budget' ? 'active' : ''} aria-pressed={recommendationMode === 'budget'} onClick={() => setRecommendationMode('budget')}>예산 내 추천</button></div>{recommendationMode === 'budget' && <label className="budget-input"><span>예산</span><input aria-label="예산 (억 메소)" type="number" min="0.1" max="90000000" step="0.1" inputMode="decimal" value={budget} onChange={(event) => setBudget(event.target.value)} /><span>억 메소</span></label>}</div>{recommendation.coverage && <div className="coverage" aria-label="분석 가능 장비"><span>스타포스 {recommendation.coverage.starforce}</span><span>잠재 {recommendation.coverage.potential}</span><span>에디셔널 {recommendation.coverage.additionalPotential}</span></div>}<span className="pending-badge">{recommendation.status === 'loading' ? '확인 중' : '순위 계산 대기'}</span></section>
+      {tierCandidates.length > 0 && <section className="tier-calculations" aria-label="검증된 잠재 등급 상승 계산"><div className="calculation-heading"><div><span className="eyebrow">VERIFIED CALCULATION</span><h3>잠재 등급 상승 참고</h3></div><span>{tierCandidates.length}개 계산 가능</span></div><div className="tier-table"><div className="tier-head"><span>장비</span><span>구분</span><span>등급</span><span>1회 비용</span><span>상승 확률</span><span>보장 기준</span></div>{tierCandidates.map((candidate) => <div className="tier-row" key={`${candidate.slot}-${candidate.potentialType}`}><strong>{candidate.itemName}<small>Lv. {candidate.equipmentLevel}</small></strong><span>{candidate.potentialType === 'regular' ? '일반' : '에디셔널'}</span><span>{gradeNames[candidate.currentGrade]} → {gradeNames[candidate.nextGrade]}</span><span>{mesos.format(candidate.resetCost)} 메소</span><span>{(candidate.successProbability * 100).toFixed(4).replace(/\.0+$/, '')}%</span><span>{candidate.guaranteeFailures}회 실패</span></div>)}</div><p className="calculation-note">목표 옵션 조합과 현재 보장 누적 횟수는 반영하지 않은 등급 상승 참고값입니다. 강화 우선순위에는 아직 사용하지 않습니다.</p></section>}
+      {starforceRisks.length > 0 && <section className="tier-calculations" aria-label="부분 지원 스타포스 기대 비용 계산"><div className="calculation-heading"><div><span className="eyebrow">COMMUNITY MODEL</span><h3>스타포스 다음 성 기대 비용</h3></div><span>{starforceRisks.length}개 계산 가능</span></div><div className="tier-table starforce-table"><div className="tier-head"><span>장비</span><span>현재</span><span>1회 비용</span><span>다음 성 기대 메소</span><span>성공</span><span>파괴</span><span>온전 복구</span></div>{starforceRisks.map((risk) => <div className="tier-row" key={risk.slot}><strong>{risk.itemName}<small>{risk.traceRecoveryStar === null ? '파괴 없음' : `파괴 시 ${risk.traceRecoveryStar}성 흔적`}</small></strong><span>{risk.currentStar}성</span><span>{mesos.format(risk.attemptCost)}</span><span>{mesos.format(risk.expectedMesoWithoutSpares)} 메소</span><span>{(risk.successProbability * 100).toFixed(3).replace(/0+$/, '').replace(/\.$/, '')}%</span><span>{(risk.destroyProbability * 100).toFixed(3).replace(/0+$/, '').replace(/\.$/, '')}%</span><span>{risk.intactRecoveryCopies === null ? '-' : `동일 장비 ${risk.intactRecoveryCopies}개`}</span></div>)}</div><p className="calculation-note">메수라이브 공개 모델의 기본 비용식과 넥슨 공식 확률을 사용한 이벤트·할인·파괴방지 없음 기준입니다. 기대 메소에는 파괴 시 스페어 장비 가격이 포함되지 않아 강화 순위에는 아직 사용하지 않습니다.</p></section>}
       <details className="rule-status"><summary>강화 규칙 {rules.summary.verified}/{rules.summary.total} 검증</summary><div><span className="rule-version">{rules.version || '불러오는 중'} · {rules.updatedAt || '기준일 확인 중'}</span>{Object.entries(rules.capabilities).map(([id, capability]) => <p key={id}><strong className={['rule-', capability.status].join('')}>{capability.status === 'verified' ? '검증' : capability.status === 'partial' ? '부분' : '미지원'}</strong><span>{capability.label}</span><small>{capability.message}</small></p>)}</div></details>
       <footer><span>메이플 스타</span><a href="https://openapi.nexon.com/ko/game/maplestory/" target="_blank" rel="noreferrer">Data based on NEXON Open API <ArrowUpRight size={12} /></a><span>넥슨 공식 서비스가 아닙니다.</span></footer>
     </main>
-    <dialog ref={helpRef} onClose={() => setHelp(false)} className="help-dialog"><div className="dialog-heading"><h2>서비스 정보</h2><button className="icon-button" aria-label="서비스 정보 닫기" onClick={() => setHelp(false)}><X /></button></div><p>회원가입 없이 캐릭터 장비를 확인할 수 있습니다. 조회 정보는 완료된 전일 데이터를 기준으로 하며, 오전 2시 이전에는 전전일 데이터를 사용합니다.</p><p>최근 조회한 이름은 이 브라우저에 최대 29일간 저장되며 직접 삭제할 수 있습니다. 예시 캐릭터는 실제 게임 데이터가 아닙니다.</p><p>보스별 강화 추천, 구매 비교와 이미지 분석은 아직 제공하지 않습니다.</p></dialog>
+    <dialog ref={helpRef} onClose={() => setHelp(false)} className="help-dialog"><div className="dialog-heading"><h2>서비스 정보</h2><button className="icon-button" aria-label="서비스 정보 닫기" onClick={() => setHelp(false)}><X /></button></div><p>회원가입 없이 캐릭터 장비를 확인할 수 있습니다. 조회 정보는 완료된 전일 데이터를 기준으로 하며, 오전 2시 이전에는 전전일 데이터를 사용합니다.</p><p>최근 조회한 이름은 이 브라우저에 최대 29일간 저장되며 직접 삭제할 수 있습니다. 예시 캐릭터는 실제 게임 데이터가 아닙니다.</p><p>잠재 등급 상승, 공식 줄별 옵션 확률과 기본 조건의 스타포스 기대 비용은 참고값을 제공합니다. 직업별 최종뎀 순위, 구매 비교와 이미지 분석은 아직 준비 중입니다.</p></dialog>
     <dialog ref={detailRef} onClose={() => setMobileDetail(false)} className="mobile-detail"><div className="dialog-heading"><span>장비 정보</span><button className="icon-button" aria-label="장비 상세 닫기" onClick={() => setMobileDetail(false)}><X /></button></div>{detail}</dialog>
+    <PotentialOptionsDialog item={selected} open={potentialOptionsOpen} onClose={closePotentialOptions} />
   </>;
 }
 

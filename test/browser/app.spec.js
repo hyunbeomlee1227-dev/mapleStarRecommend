@@ -29,17 +29,22 @@ test('equipment browsing, filters, detail and status remain usable', async ({ pa
   await expect(page.locator('.set-row')).toContainText('예시 세트 효과');
   await page.getByRole('tab', { name: '장비 목록' }).click();
   await page.getByLabel('잠재능력 등급 필터').selectOption('all');
-  await expect(page.getByLabel('분석 가능 장비')).toContainText('스타포스 10');
+  await expect(page.getByLabel('분석 가능 장비')).toContainText('스타포스 8');
   await page.getByRole('button', { name: '예산 내 추천' }).click();
   await expect(page.getByText('예산을 0보다 큰 억 메소 단위로 입력해 주세요.')).toBeVisible();
   await page.getByLabel('예산 (억 메소)').fill('100');
   await expect(page.getByText('강화 후보 정보는 준비됐지만 비용과 성능 모델 검증 전이라 순위를 제공하지 않습니다.')).toBeVisible();
-  await expect(page.getByText('강화 규칙 1/4 검증')).toBeVisible();
-  await page.getByText('강화 규칙 1/4 검증').click();
-  await expect(page.getByText('2026-09-11-v1 · 2026-09-11')).toBeVisible();
+  await expect(page.getByText('잠재 등급 상승 참고')).toBeVisible();
+  await expect(page.getByText('38,250,000 메소').first()).toBeVisible();
+  await expect(page.getByText('스타포스 다음 성 기대 비용')).toBeVisible();
+  await expect(page.getByText('16.85%', { exact: true }).first()).toBeVisible();
+  await expect(page.getByText('3,151,795,078 메소', { exact: true }).first()).toBeVisible();
+  await expect(page.getByText('강화 규칙 2/5 검증')).toBeVisible();
+  await page.getByText('강화 규칙 2/5 검증').click();
+  await expect(page.getByText('2026-09-11-v4 · 2026-09-11')).toBeVisible();
   await expect(page.getByText('잠재 재설정 비용', { exact: true })).toBeVisible();
   await expect(page.getByText('스타포스 기대 비용', { exact: true })).toBeVisible();
-  await expect(page.getByText('추천 미제공', { exact: true })).toBeVisible();
+  await expect(page.getByText('순위 계산 대기', { exact: true })).toBeVisible();
   await page.screenshot({ path: `test-results/${info.project.name}.png`, fullPage: true });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   expect(errors).toEqual([]);
@@ -66,4 +71,31 @@ test('lookup failures preserve current displayed data and show an error', async 
   await page.getByRole('button', { name: '캐릭터 조회', exact: true }).click();
   await expect(page.getByRole('alert')).toContainText('캐릭터를 찾지 못했습니다.');
   await expect(page.locator('.character-identity h2')).toHaveText('예시 히어로');
+});
+
+test('selected equipment can load official regular and additional potential option tables', async ({ page }, info) => {
+  const requests = [];
+  await page.route('**/api/rules/potential-options?*', async (route) => {
+    requests.push(new URL(route.request().url()).searchParams.get('type'));
+    await route.fulfill({ json: {
+      grade: '레전드리', part: '무기', levelBand: '120~200', sourceUrl: 'https://maplestory.nexon.com/Guide/OtherProbability/cube/black', cached: false,
+      lines: [
+        [{ option: '보스 몬스터 공격 시 데미지 +40%', probability: 0.1 }],
+        [{ option: '공격력 +12%', probability: 0.02 }],
+        [{ option: '몬스터 방어율 무시 +40%', probability: 0.005 }],
+      ],
+    } });
+  });
+  await page.goto('/');
+  if (info.project.name === 'mobile') await page.getByRole('button', { name: '아케인셰이드 투핸드소드 상세 보기' }).click();
+  await page.getByRole('button', { name: '공식 잠재 옵션표 보기' }).click();
+  await expect(page.getByRole('dialog', { name: '공식 잠재 옵션표' })).toBeVisible();
+  await expect(page.locator('dialog:open')).toHaveCount(1);
+  await expect(page.getByText('보스 몬스터 공격 시 데미지 +40%')).toBeVisible();
+  await page.screenshot({ path: `test-results/potential-options-${info.project.name}.png`, fullPage: true });
+  expect(await page.getByRole('dialog', { name: '공식 잠재 옵션표' }).evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+  await page.getByRole('button', { name: '에디셔널' }).click();
+  await expect.poll(() => requests).toEqual(['regular', 'additional']);
+  await page.getByLabel('공식 잠재 옵션표 닫기').click();
+  if (info.project.name === 'mobile') await expect(page.getByLabel('장비 상세 닫기')).toBeVisible();
 });

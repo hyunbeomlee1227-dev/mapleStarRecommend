@@ -2,11 +2,13 @@ import express from 'express';
 import { LookupError } from './nexon.js';
 import { assessGoal } from './combat.js';
 import { buildRecommendationPlan, recommendationRequestSchema } from './recommendation.js';
+import { PotentialOptionsError, potentialOptionsQuerySchema } from './potential-options.js';
 
-export function createApp({ service, goals = { goals: [], defaultGoalId: null }, rules = { version: null, updatedAt: null, capabilities: {}, potentialResetCosts: { regular: [], additional: [] }, summary: { verified: 0, partial: 0, unsupported: 0, total: 0 } }, perMinute = 12, now = Date.now }) {
+export function createApp({ service, potentialOptions = null, goals = { goals: [], defaultGoalId: null }, rules = { version: null, updatedAt: null, capabilities: {}, potentialResetCosts: { regular: [], additional: [] }, potentialTierUpgrades: { regular: {}, additional: {} }, starforceOutcomes: {}, starforceCostModel: null, summary: { verified: 0, partial: 0, unsupported: 0, total: 0 } }, perMinute = 12, potentialOptionsPerMinute = 30, now = Date.now }) {
   const app = express();
   app.disable('x-powered-by');
   const clients = new Map();
+  const potentialClients = new Map();
   app.use('/api', (req, res, next) => {
     res.set('Cache-Control', 'no-store');
     res.set('X-Content-Type-Options', 'nosniff');
@@ -15,6 +17,25 @@ export function createApp({ service, goals = { goals: [], defaultGoalId: null },
   app.get('/api/status', (_req, res) => res.json({ configured: service.configured, recommendation: 'unverified' }));
   app.get('/api/goals', (_req, res) => res.json(goals));
   app.get('/api/rules', (_req, res) => res.json(rules));
+  app.get('/api/rules/potential-options', async (req, res) => {
+    const parsed = potentialOptionsQuerySchema.safeParse(req.query);
+    if (!parsed.success) return res.status(400).json({ code: 'INVALID_POTENTIAL_OPTION_INPUT', message: parsed.error.issues[0]?.message || '잠재 옵션 검색 조건을 확인해 주세요.' });
+    if (!potentialOptions) return res.status(503).json({ code: 'POTENTIAL_OPTIONS_UNAVAILABLE', message: '공식 잠재 옵션 조회가 준비되지 않았습니다.' });
+    const time = now();
+    for (const [ip, entry] of potentialClients) if (entry.until <= time) potentialClients.delete(ip);
+    const current = potentialClients.get(req.ip) ?? { count: 0, until: time + 60000 };
+    if (current.count >= potentialOptionsPerMinute || (!potentialClients.has(req.ip) && potentialClients.size >= 10000)) {
+      res.set('Retry-After', '60');
+      return res.status(429).json({ code: 'RATE_LIMIT', message: '공식 잠재 옵션 조회가 많습니다. 1분 후 다시 시도해 주세요.' });
+    }
+    current.count++;
+    potentialClients.set(req.ip, current);
+    try { return res.json(await potentialOptions.lookup(parsed.data)); }
+    catch (error) {
+      if (error instanceof PotentialOptionsError) return res.status(error.status).json({ code: error.code, message: error.message });
+      return res.status(502).json({ code: 'OFFICIAL_SOURCE_UNAVAILABLE', message: '공식 잠재 옵션 정보를 불러오지 못했습니다.' });
+    }
+  });
   app.get('/api/character', async (req, res) => {
     const time = now();
     for (const [ip, entry] of clients) if (entry.until <= time) clients.delete(ip);

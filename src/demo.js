@@ -19,7 +19,7 @@ export const demo = {
     starforce: stars, potential_option_grade: grade, additional_potential_option_grade: additional,
     potential_option_1: lines[0], potential_option_2: lines[1], potential_option_3: lines[2],
     additional_potential_option_1: '공격력 : +10', additional_potential_option_2: 'STR : +2%', additional_potential_option_3: '최대 HP : +100',
-    item_total_option: { str: String(90 + index * 7), attack_power: String(index === 0 ? 480 : 35), max_hp: '100' },
+    item_total_option: { str: String(90 + index * 7), attack_power: String(index === 0 ? 480 : 35), max_hp: '100', base_equipment_level: index === 0 || index === 6 || index === 7 ? 200 : 150 },
     item_base_option: { str: '30', attack_power: String(index === 0 ? 295 : 5) },
     item_add_option: { str: '40', all_stat: '5' }, item_starforce_option: { str: '20', attack_power: '25' },
   })),

@@ -9,12 +9,25 @@ import { createApp } from '../server/app.js';
 
 test('upgrade rule catalog exposes verified costs and blocks incomplete calculations', async () => {
   const rules = await loadUpgradeRules();
-  assert.equal(rules.version, '2026-09-11-v1');
+  assert.equal(rules.version, '2026-09-11-v4');
   assert.equal(rules.capabilities.potentialResetCost.status, 'verified');
-  assert.equal(rules.capabilities.starforceExpectedCost.status, 'unsupported');
+  assert.equal(rules.capabilities.potentialTierUpgrade.status, 'verified');
+  assert.equal(rules.capabilities.potentialTierUpgrade.usableForRecommendation, true);
+  assert.equal(rules.capabilities.starforceExpectedCost.status, 'partial');
   assert.equal(rules.capabilities.starforceExpectedCost.usableForRecommendation, false);
+  assert.equal(rules.capabilities.bossDamageModel.status, 'partial');
   assert.equal(rules.potentialResetCosts.regular[0].costs.legendary, 40_000_000);
   assert.equal(rules.potentialResetCosts.additional.at(-1).costs.legendary, 98_000_000);
+  assert.deepEqual(rules.potentialTierUpgrades.regular.unique, {
+    nextGrade: 'legendary', successProbability: 0.014, guaranteeFailures: 107,
+  });
+  assert.deepEqual(rules.starforceOutcomes['22'], {
+    successProbability: 0.1575, maintainProbability: 0.674, destroyProbability: 0.1685,
+  });
+  assert.deepEqual(rules.starforceCostModel, {
+    sourceKind: 'community', sourceUrl: 'https://github.com/kurateh/mesulive',
+    verifiedAgainst: '2026-03-21', minLevel: 1, maxLevel: 300,
+  });
 });
 
 test('upgrade rule endpoint returns a public status summary without secrets', async () => {
@@ -24,7 +37,7 @@ test('upgrade rule endpoint returns a public status summary without secrets', as
   const response = await request(app).get('/api/rules');
   assert.equal(response.status, 200);
   assert.equal(response.body.version, rules.version);
-  assert.deepEqual(response.body.summary, { verified: 1, partial: 1, unsupported: 2, total: 4 });
+  assert.deepEqual(response.body.summary, { verified: 2, partial: 3, unsupported: 0, total: 5 });
   assert.equal(JSON.stringify(response.body).includes('NEXON_API_KEY'), false);
   const recommendation = await request(app).post('/api/recommendations').send({
     goalId: goal.id,

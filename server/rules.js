@@ -34,6 +34,21 @@ const bandsSchema = z.array(bandSchema).min(1).superRefine((bands, context) => {
     }
   }
 });
+const tierRuleSchema = z.object({
+  nextGrade: z.enum(['epic', 'unique', 'legendary']),
+  successProbability: z.number().positive().max(1),
+  guaranteeFailures: z.number().int().positive(),
+});
+const tierRulesSchema = z.object({
+  rare: tierRuleSchema.extend({ nextGrade: z.literal('epic') }),
+  epic: tierRuleSchema.extend({ nextGrade: z.literal('unique') }),
+  unique: tierRuleSchema.extend({ nextGrade: z.literal('legendary') }),
+});
+const starforceOutcomeSchema = z.object({
+  successProbability: z.number().min(0).max(1),
+  maintainProbability: z.number().min(0).max(1),
+  destroyProbability: z.number().min(0).max(1),
+}).refine((outcome) => Math.abs(outcome.successProbability + outcome.maintainProbability + outcome.destroyProbability - 1) < 0.000001, '스타포스 결과 확률의 합은 1이어야 합니다.');
 const fileSchema = z.object({
   version: z.string().min(1),
   updatedAt: z.iso.date(),
@@ -41,6 +56,23 @@ const fileSchema = z.object({
   potentialResetCosts: z.object({
     regular: bandsSchema,
     additional: bandsSchema,
+  }),
+  potentialTierUpgrades: z.object({
+    regular: tierRulesSchema,
+    additional: tierRulesSchema,
+  }),
+  starforceOutcomes: z.record(z.string().regex(/^([0-9]|[12][0-9])$/), starforceOutcomeSchema).superRefine((outcomes, context) => {
+    const expected = Array.from({ length: 30 }, (_, index) => String(index));
+    if (expected.some((star) => !outcomes[star]) || Object.keys(outcomes).length !== expected.length) {
+      context.addIssue({ code: 'custom', message: '스타포스 결과 확률은 0성부터 29성까지 모두 있어야 합니다.' });
+    }
+  }),
+  starforceCostModel: z.object({
+    sourceKind: z.literal('community'),
+    sourceUrl: z.string().url(),
+    verifiedAgainst: z.iso.date(),
+    minLevel: z.literal(1),
+    maxLevel: z.literal(300),
   }),
 });
 
