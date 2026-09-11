@@ -24,7 +24,7 @@ export const demo = {
     item_total_option: { str: '102', attack_power: String(index === 0 ? 328 : 38), max_hp: '100', all_stat: '5', base_equipment_level: index === 0 || index === 6 || index === 7 ? 200 : 150 },
     item_base_option: { str: '30', attack_power: String(index === 0 ? 295 : 5) },
     item_add_option: { str: '40', all_stat: '5' }, item_starforce_option: { str: '20', attack_power: '25' },
-    item_etc_option: { str: '12', attack_power: '8' }, scroll_upgrade: index === 1 || index === 2 ? '0' : '8', scroll_upgradeable_count: index === 1 || index === 2 ? '0' : '2', scroll_resilience_count: '0', golden_hammer_flag: index === 1 || index === 2 ? null : '적용',
+    item_etc_option: { str: '12', attack_power: '8' }, scroll_upgrade: index === 1 || index === 2 ? '0' : '8', scroll_upgradeable_count: index === 1 || index === 2 ? '0' : '2', scroll_resilience_count: '0', golden_hammer_flag: index === 1 || index === 2 ? null : '적용', starforce_scroll_flag: '미사용', cuttable_count: index === 0 || index === 8 ? '5' : '255',
   })),
   stats: [{ stat_name: 'STR', stat_value: '38420' }, { stat_name: '보스 몬스터 데미지', stat_value: '320' }, { stat_name: '방어율 무시', stat_value: '94.8' }, { stat_name: '크리티컬 데미지', stat_value: '86' }],
   sets: [{ set_name: '예시 세트 효과', total_set_count: 3, set_effect_info: [{ set_count: 3, set_option: '공격력 : +50' }] }],

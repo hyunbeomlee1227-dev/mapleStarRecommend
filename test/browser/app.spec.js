@@ -27,13 +27,15 @@ test('equipment browsing, filters, detail and status remain usable', async ({ pa
   await expect(detail.locator('[data-stat="str"]')).toContainText('+102');
   await expect(detail.locator('[data-stat="str"]')).toContainText('(30+40+12+20)');
   await expect(detail.getByText('주문서 강화 8회', { exact: false })).toBeVisible();
-  await expect(detail.getByText('강화 종류', { exact: true })).toBeVisible();
-  await expect(detail.getByText('Open API 미제공', { exact: true })).toBeVisible();
+  await expect(detail.getByText('가위 사용 가능 횟수 : 5회', { exact: true })).toBeVisible();
+  await expect(detail.getByText('강화 방식', { exact: true })).toBeVisible();
+  await expect(detail.getByText('일반 주문서 강화', { exact: true })).toBeVisible();
+  await expect(detail.getByText('세부 주문서명 식별 불가', { exact: true })).toBeVisible();
   await expect(detail.locator('.tooltip-scroll-result')).toContainText('STR +12');
   await expect(detail.locator('.tooltip-scroll-result')).toContainText('공격력 +8');
   await expect(detail.getByRole('heading', { name: '잠재능력', exact: true })).toBeVisible();
   await expect(detail.getByRole('heading', { name: '에디셔널 잠재능력', exact: true })).toBeVisible();
-  expect(await detail.locator('.equipment-tooltip').evaluate((element) => getComputedStyle(element).backgroundColor)).toBe('rgb(35, 37, 44)');
+  expect(await detail.locator('.equipment-tooltip').evaluate((element) => getComputedStyle(element).backgroundColor)).toBe('rgb(36, 38, 45)');
   if (info.project.name === 'mobile') await page.getByLabel('장비 상세 닫기').click();
   else await expect(detail.locator('h3')).toHaveText('에스텔라 이어링 (+8)');
   await page.getByLabel('장비 검색', { exact: true }).fill('');

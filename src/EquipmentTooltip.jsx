@@ -76,6 +76,12 @@ function ScrollResult({ values }) {
   return <p className="tooltip-scroll-result"><span>강화 결과</span>{entries.map(([key, value]) => <strong key={key}>{statLabels[key] || key} {formattedValue(key, value)}</strong>)}</p>;
 }
 
+function scrollMethod(item, upgrades) {
+  if (upgrades <= 0) return '주문서 강화 없음';
+  if (item.starforce_scroll_flag === '사용') return '놀라운 장비 강화 주문서';
+  return '일반 주문서 강화';
+}
+
 export default function EquipmentTooltip({ item, characterJob, onOpenPotentialOptions }) {
   const stars = supportsStarforce(item) ? Number(item.starforce) || 0 : 0;
   const upgrades = Number(item.scroll_upgrade) || 0;
@@ -86,14 +92,17 @@ export default function EquipmentTooltip({ item, characterJob, onOpenPotentialOp
     <header className="tooltip-header">
       <StarRow count={stars} />
       <h3>{item.item_name}{upgrades > 0 ? ` (+${upgrades})` : ''}</h3>
-      {item.item_description && <p>{item.item_description}</p>}
+      <div className="tooltip-notices">
+        {numberValue(item.cuttable_count) !== null && numberValue(item.cuttable_count) < 255 && <p>가위 사용 가능 횟수 : {numberValue(item.cuttable_count)}회</p>}
+        {item.item_description && <p>{item.item_description}</p>}
+      </div>
     </header>
     <div className="tooltip-summary">
       <EquipmentIcon item={item} />
       <div className="tooltip-summary-copy"><div className="tooltip-tags"><span>{item.item_equipment_part || item.item_equipment_slot}</span>{item.item_gender && <span>{item.item_gender}</span>}</div><p>착용 캐릭터 직업 <strong>{characterJob || '정보 없음'}</strong></p>{level !== null && <p>요구 레벨 <strong>Lv. {level}</strong></p>}{item.item_shape_name && item.item_shape_name !== item.item_name && <p>외형 <strong>{item.item_shape_name}</strong></p>}</div>
     </div>
     <section className="tooltip-section tooltip-stat-section"><StatBreakdown item={item} /></section>
-    {(upgrades > 0 || remaining !== null || resilience !== null) && <section className="tooltip-section tooltip-upgrade"><div><strong>주문서 강화 {upgrades}회</strong><span>(잔여 {remaining ?? 0}회, 복구 가능 {resilience ?? 0}회)</span></div>{item.golden_hammer_flag && <small>황금 망치 {item.golden_hammer_flag}</small>}<p className="tooltip-scroll-kind"><span>강화 종류</span><strong>Open API 미제공</strong></p><ScrollResult values={item.item_etc_option} /></section>}
+    {(upgrades > 0 || remaining !== null || resilience !== null) && <section className="tooltip-section tooltip-upgrade"><div><strong>주문서 강화 {upgrades}회</strong><span>(잔여 {remaining ?? 0}회, 복구 가능 {resilience ?? 0}회)</span></div>{item.golden_hammer_flag && <small>황금 망치 {item.golden_hammer_flag}</small>}<p className="tooltip-scroll-kind"><span>강화 방식</span><strong>{scrollMethod(item, upgrades)}</strong>{upgrades > 0 && item.starforce_scroll_flag !== '사용' && <em>세부 주문서명 식별 불가</em>}</p><ScrollResult values={item.item_etc_option} /></section>}
     {(item.growth_level || item.soul_name) && <section className="tooltip-section tooltip-extra">{item.growth_level ? <p>성장 레벨 <strong>{item.growth_level}</strong>{item.growth_exp != null && <span> · 경험치 {Number(item.growth_exp).toLocaleString('ko-KR')}</span>}</p> : null}{item.soul_name && <p>{item.soul_name} · {item.soul_option || '소울 옵션 정보 없음'}</p>}</section>}
     <PotentialBlock item={item} />
     <PotentialBlock item={item} additional />
