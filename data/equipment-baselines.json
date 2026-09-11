@@ -1,0 +1,1255 @@
+{
+  "version": "2026-09-10-dojang-v1",
+  "source": {
+    "kind": "nexon-open-api-dojang",
+    "url": "https://openapi.nexon.com/ko/game/maplestory/?id=18"
+  },
+  "date": "2026-09-10",
+  "fetchedAt": "2026-09-11T14:59:12.596Z",
+  "sample": {
+    "requested": 20,
+    "succeeded": 20,
+    "failed": 0
+  },
+  "global": {
+    "sampleSize": 20,
+    "slots": {
+      "귀고리": [
+        {
+          "itemName": "커맨더 포스 이어링",
+          "count": 8,
+          "slotItemShare": 0.4
+        },
+        {
+          "itemName": "하프 이어링",
+          "count": 7,
+          "slotItemShare": 0.35
+        },
+        {
+          "itemName": "에스텔라 이어링",
+          "count": 4,
+          "slotItemShare": 0.2
+        },
+        {
+          "itemName": "데아 시두스 이어링",
+          "count": 1,
+          "slotItemShare": 0.05
+        }
+      ],
+      "기계 심장": [
+        {
+          "itemName": "플라즈마 하트",
+          "count": 13,
+          "slotItemShare": 0.65
+        },
+        {
+          "itemName": "컴플리트 언더컨트롤",
+          "count": 5,
+          "slotItemShare": 0.25
+        },
+        {
+          "itemName": "페어리 하트",
+          "count": 2,
+          "slotItemShare": 0.1
+        }
+      ],
+      "눈장식": [
+        {
+          "itemName": "마력이 깃든 안대",
+          "count": 9,
+          "slotItemShare": 0.45
+        },
+        {
+          "itemName": "미카엘라의 새 안경",
+          "count": 7,
+          "slotItemShare": 0.35
+        },
+        {
+          "itemName": "블랙빈 마크",
+          "count": 2,
+          "slotItemShare": 0.1
+        },
+        {
+          "itemName": "아쿠아틱 레터 눈장식",
+          "count": 1,
+          "slotItemShare": 0.05
+        },
+        {
+          "itemName": "파풀라투스 마크",
+          "count": 1,
+          "slotItemShare": 0.05
+        }
+      ],
+      "망토": [
+        {
+          "itemName": "도전자의 망토",
+          "count": 5,
+          "slotItemShare": 0.25
+        },
+        {
+          "itemName": "에테르넬 나이트케이프",
+          "count": 3,
+          "slotItemShare": 0.15
+        },
+        {
+          "itemName": "아케인셰이드 나이트케이프",
+          "count": 2,
+          "slotItemShare": 0.1
+        },
+        {
+          "itemName": "아케인셰이드 메이지케이프",
+          "count": 2,
+          "slotItemShare": 0.1
+        },
+        {
+          "itemName": "에테르넬 메이지케이프",
+          "count": 2,
+          "slotItemShare": 0.1
+        },
+        {
+          "itemName": "아케인셰이드 시프케이프",
+          "count": 1,
+          "slotItemShare": 0.05
+        },
+        {
+          "itemName": "아케인셰이드 아처케이프",
+          "count": 1,
+          "slotItemShare": 0.05
+        },
+        {
+          "itemName": "앱솔랩스 시프케이프",
+          "count": 1,
+          "slotItemShare": 0.05
+        },
+        {
+          "itemName": "앱솔랩스 아처케이프",
+          "count": 1,
+          "slotItemShare": 0.05
+        },
+        {
+          "itemName": "에테르넬 시프케이프",
+          "count": 1,
+          "slotItemShare": 0.05
+        },
+        {
+          "itemName": "에테르넬 아처케이프",
+          "count": 1,
+          "slotItemShare": 0.05
+        }
+      ],
+      "모자": [
+        {
+          "itemName": "에테르넬 나이트헬름",
+          "count": 6,
+          "slotItemShare": 0.3
+        },
+        {
+          "itemName": "에테르넬 메이지햇",
+          "count": 3,
+          "slotItemShare": 0.15
+        },
+        {
+          "itemName": "에테르넬 시프반다나",
+          "count": 3,
+          "slotItemShare": 0.15
+        },
+        {
+          "itemName": "에테르넬 아처햇",
+          "count": 3,
+          "slotItemShare": 0.15
+        },
+        {
+          "itemName": "도전자의 모자",
+          "count": 2,
+          "slotItemShare": 0.1
+        },
+        {
+          "itemName": "에테르넬 파이렛햇",
+          "count": 1,
+          "slotItemShare": 0.05
+        },
+        {
+          "itemName": "하이네스 던위치햇",
+          "count": 1,
+          "slotItemShare": 0.05
+        },
+        {
+          "itemName": "하이네스 레인져베레",
+          "count": 1,
+          "slotItemShare": 0.05
+        }
+      ],
+      "무기": [
+        {
+          "itemName": "제네시스 카르타",
+          "count": 4,
+          "slotItemShare": 0.2
+        },
+        {
+          "itemName": "제네시스 보우",
+          "count": 2,
+          "slotItemShare": 0.1
+        },
+        {
+          "itemName": "제네시스 폴암",
+          "count": 2,
+          "slotItemShare": 0.1
+        },
+        {
+          "itemName": "데스티니 가즈",
+          "count": 1,
+          "slotItemShare": 0.05
+        },
+        {
+          "itemName": "데스티니 대거",
+          "count": 1,
+          "slotItemShare": 0.05
+        },
+        {
+          "itemName": "데스티니 라즐리",
+          "count": 1,
+          "slotItemShare": 0.05
+        },
+        {
+          "itemName": "데스티니 스태프",
+          "count": 1,
+          "slotItemShare": 0.05
+        },
+        {
+          "itemName": "데스티니 투핸드소드",
+          "count": 1,
+          "slotItemShare": 0.05
+        },
+        {
+          "itemName": "제네시스 가즈",
+          "count": 1,
+          "slotItemShare": 0.05
+        },
+        {
+          "itemName": "제네시스 듀얼보우건",
+          "count": 1,
+          "slotItemShare": 0.05
+        },
+        {
+          "itemName": "제네시스 라즐리",
+          "count": 1,
+          "slotItemShare": 0.05
+        },
+        {
+          "itemName": "제네시스 스태프",
+          "count": 1,
+          "slotItemShare": 0.05
+        },
+        {
+          "itemName": "제네시스 창세검",
+          "count": 1,
+          "slotItemShare": 0.05
+        },
+        {
+          "itemName": "제네시스 크로스보우",
+          "count": 1,
+          "slotItemShare": 0.05
+        },
+        {
+          "itemName": "제네시스 피스톨",
+          "count": 1,
+          "slotItemShare": 0.05
+        }
+      ],
+      "반지": [
+        {
+          "itemName": "마이스터링",
+          "count": 11,
+          "slotItemShare": 0.1375
+        },
+        {
+          "itemName": "여명의 가디언 엔젤 링",
+          "count": 11,
+          "slotItemShare": 0.1375
+        },
+        {
+          "itemName": "리스트레인트 링",
+          "count": 9,
+          "slotItemShare": 0.1125
+        },
+        {
+          "itemName": "거대한 공포",
+          "count": 8,
+          "slotItemShare": 0.1
+        },
+        {
+          "itemName": "글로리온 링 : 슈프림",
+          "count": 5,
+          "slotItemShare": 0.0625
+        },
+        {
+          "itemName": "이터널 플레임 링",
+          "count": 5,
+          "slotItemShare": 0.0625
+        },
+        {
+          "itemName": "테네브리스 원정대 반지",
+          "count": 5,
+          "slotItemShare": 0.0625
+        },
+        {
+          "itemName": "어웨이크 링",
+          "count": 4,
+          "slotItemShare": 0.05
+        },
+        {
+          "itemName": "카오스 링",
+          "count": 4,
+          "slotItemShare": 0.05
+        },
+        {
+          "itemName": "벤젼스 링",
+          "count": 3,
+          "slotItemShare": 0.0375
+        },
+        {
+          "itemName": "코스모스 링",
+          "count": 3,
+          "slotItemShare": 0.0375
+        },
+        {
+          "itemName": "SS급 마스터 쥬얼링",
+          "count": 3,
+          "slotItemShare": 0.0375
+        },
+        {
+          "itemName": "결속의 반지",
+          "count": 2,
+          "slotItemShare": 0.025
+        },
+        {
+          "itemName": "황홀한 악몽",
+          "count": 2,
+          "slotItemShare": 0.025
+        },
+        {
+          "itemName": "가디언 엔젤 링",
+          "count": 1,
+          "slotItemShare": 0.0125
+        },
+        {
+          "itemName": "가디언의 마이스터 임모탈 링",
+          "count": 1,
+          "slotItemShare": 0.0125
+        },
+        {
+          "itemName": "근원의 속삭임",
+          "count": 1,
+          "slotItemShare": 0.0125
+        },
+        {
+          "itemName": "마이스터 올마이티링",
+          "count": 1,
+          "slotItemShare": 0.0125
+        },
+        {
+          "itemName": "버서커의 마이스터 임모탈 링",
+          "count": 1,
+          "slotItemShare": 0.0125
+        }
+      ],
+      "뱃지": [
+        {
+          "itemName": "창세의 뱃지",
+          "count": 9,
+          "slotItemShare": 0.45
+        },
+        {
+          "itemName": "크리스탈 웬투스 뱃지",
+          "count": 9,
+          "slotItemShare": 0.45
+        },
+        {
+          "itemName": "칠요의 뱃지",
+          "count": 2,
+          "slotItemShare": 0.1
+        }
+      ],
+      "벨트": [
+        {
+          "itemName": "몽환의 벨트",
+          "count": 12,
+          "slotItemShare": 0.6
+        },
+        {
+          "itemName": "골든 클로버 벨트",
+          "count": 3,
+          "slotItemShare": 0.15
+        },
+        {
+          "itemName": "분노한 자쿰의 벨트",
+          "count": 2,
+          "slotItemShare": 0.1
+        },
+        {
+          "itemName": "타일런트 케이론 벨트",
+          "count": 1,
+          "slotItemShare": 0.05
+        },
+        {
+          "itemName": "타일런트 헤르메스 벨트",
+          "count": 1,
+          "slotItemShare": 0.05
+        },
+        {
+          "itemName": "타일런트 히아데스 벨트",
+          "count": 1,
+          "slotItemShare": 0.05
+        }
+      ],
+      "보조무기": [
+        {
+          "itemName": "블랙 마법깃펜",
+          "count": 2,
+          "slotItemShare": 0.1
+        },
+        {
+          "itemName": "아스트라 탈리스만",
+          "count": 2,
+          "slotItemShare": 0.1
+        },
+        {
+          "itemName": "녹스 마법깃펜",
+          "count": 1,
+          "slotItemShare": 0.05
+        },
+        {
+          "itemName": "데스티니 라피스",
+          "count": 1,
+          "slotItemShare": 0.05
+        },
+        {
+          "itemName": "무한의 마법 화살",
+          "count": 1,
+          "slotItemShare": 0.05
+        },
+        {
+          "itemName": "블라스트 페더",
+          "count": 1,
+          "slotItemShare": 0.05
+        },
+        {
+          "itemName": "블랙 팔콘아이",
+          "count": 1,
+          "slotItemShare": 0.05
+        },
+        {
+          "itemName": "아스트라 백호추",
+          "count": 1,
+          "slotItemShare": 0.05
+        },
+        {
+          "itemName": "아스트라 블레이드",
+          "count": 1,
+          "slotItemShare": 0.05
+        },
+        {
+          "itemName": "아스트라 아케인 실드",
+          "count": 1,
+          "slotItemShare": 0.05
+        },
+        {
+          "itemName": "아스트라 여의보주",
+          "count": 1,
+          "slotItemShare": 0.05
+        },
+        {
+          "itemName": "아스트라 토파즈",
+          "count": 1,
+          "slotItemShare": 0.05
+        },
+        {
+          "itemName": "이볼빙 녹스 마법깃펜",
+          "count": 1,
+          "slotItemShare": 0.05
+        },
+        {
+          "itemName": "이볼빙 에레브의 광휘",
+          "count": 1,
+          "slotItemShare": 0.05
+        },
+        {
+          "itemName": "이볼빙 와일드 팡",
+          "count": 1,
+          "slotItemShare": 0.05
+        },
+        {
+          "itemName": "제네시스 라피스",
+          "count": 1,
+          "slotItemShare": 0.05
+        },
+        {
+          "itemName": "천룡추",
+          "count": 1,
+          "slotItemShare": 0.05
+        },
+        {
+          "itemName": "청은의 서 <종장>",
+          "count": 1,
+          "slotItemShare": 0.05
+        }
+      ],
+      "상의": [
+        {
+          "itemName": "에테르넬 나이트아머",
+          "count": 5,
+          "slotItemShare": 0.25
+        },
+        {
+          "itemName": "도전자의 상의",
+          "count": 4,
+          "slotItemShare": 0.2
+        },
+        {
+          "itemName": "에테르넬 메이지로브",
+          "count": 3,
+          "slotItemShare": 0.15
+        },
+        {
+          "itemName": "에테르넬 시프셔츠",
+          "count": 3,
+          "slotItemShare": 0.15
+        },
+        {
+          "itemName": "에테르넬 아처후드",
+          "count": 3,
+          "slotItemShare": 0.15
+        },
+        {
+          "itemName": "이글아이 던위치로브",
+          "count": 1,
+          "slotItemShare": 0.05
+        },
+        {
+          "itemName": "이글아이 레인져후드",
+          "count": 1,
+          "slotItemShare": 0.05
+        }
+      ],
+      "신발": [
+        {
+          "itemName": "도전자의 신발",
+          "count": 5,
+          "slotItemShare": 0.25
+        },
+        {
+          "itemName": "에테르넬 나이트슈즈",
+          "count": 3,
+          "slotItemShare": 0.15
+        },
+        {
+          "itemName": "아케인셰이드 나이트슈즈",
+          "count": 2,
+          "slotItemShare": 0.1
+        },
+        {
+          "itemName": "아케인셰이드 메이지슈즈",
+          "count": 2,
+          "slotItemShare": 0.1
+        },
+        {
+          "itemName": "에테르넬 메이지슈즈",
+          "count": 2,
+          "slotItemShare": 0.1
+        },
+        {
+          "itemName": "아케인셰이드 시프슈즈",
+          "count": 1,
+          "slotItemShare": 0.05
+        },
+        {
+          "itemName": "아케인셰이드 아처슈즈",
+          "count": 1,
+          "slotItemShare": 0.05
+        },
+        {
+          "itemName": "앱솔랩스 시프슈즈",
+          "count": 1,
+          "slotItemShare": 0.05
+        },
+        {
+          "itemName": "앱솔랩스 아처슈즈",
+          "count": 1,
+          "slotItemShare": 0.05
+        },
+        {
+          "itemName": "에테르넬 시프슈즈",
+          "count": 1,
+          "slotItemShare": 0.05
+        },
+        {
+          "itemName": "에테르넬 아처슈즈",
+          "count": 1,
+          "slotItemShare": 0.05
+        }
+      ],
+      "어깨장식": [
+        {
+          "itemName": "도전자의 어깨장식",
+          "count": 5,
+          "slotItemShare": 0.25
+        },
+        {
+          "itemName": "에테르넬 나이트숄더",
+          "count": 4,
+          "slotItemShare": 0.2
+        },
+        {
+          "itemName": "아케인셰이드 메이지숄더",
+          "count": 2,
+          "slotItemShare": 0.1
+        },
+        {
+          "itemName": "에테르넬 메이지숄더",
+          "count": 2,
+          "slotItemShare": 0.1
+        },
+        {
+          "itemName": "아케인셰이드 나이트숄더",
+          "count": 1,
+          "slotItemShare": 0.05
+        },
+        {
+          "itemName": "아케인셰이드 시프숄더",
+          "count": 1,
+          "slotItemShare": 0.05
+        },
+        {
+          "itemName": "아케인셰이드 아처숄더",
+          "count": 1,
+          "slotItemShare": 0.05
+        },
+        {
+          "itemName": "앱솔랩스 시프숄더",
+          "count": 1,
+          "slotItemShare": 0.05
+        },
+        {
+          "itemName": "앱솔랩스 아처숄더",
+          "count": 1,
+          "slotItemShare": 0.05
+        },
+        {
+          "itemName": "에테르넬 시프숄더",
+          "count": 1,
+          "slotItemShare": 0.05
+        },
+        {
+          "itemName": "에테르넬 아처숄더",
+          "count": 1,
+          "slotItemShare": 0.05
+        }
+      ],
+      "얼굴장식": [
+        {
+          "itemName": "루즈 컨트롤 머신 마크",
+          "count": 10,
+          "slotItemShare": 0.5
+        },
+        {
+          "itemName": "트와일라이트 마크",
+          "count": 4,
+          "slotItemShare": 0.2
+        },
+        {
+          "itemName": "레드 매지션 마이스터 심볼",
+          "count": 2,
+          "slotItemShare": 0.1
+        },
+        {
+          "itemName": "레드 워리어 마이스터 심볼",
+          "count": 2,
+          "slotItemShare": 0.1
+        },
+        {
+          "itemName": "레드 아처 마이스터 심볼",
+          "count": 1,
+          "slotItemShare": 0.05
+        },
+        {
+          "itemName": "샤이니 레드 시프 마이스터 심볼",
+          "count": 1,
+          "slotItemShare": 0.05
+        }
+      ],
+      "엠블렘": [
+        {
+          "itemName": "미트라의 분노 : 전사",
+          "count": 6,
+          "slotItemShare": 0.3
+        },
+        {
+          "itemName": "미트라의 분노 : 마법사",
+          "count": 5,
+          "slotItemShare": 0.25
+        },
+        {
+          "itemName": "골드 메이플리프 엠블렘",
+          "count": 2,
+          "slotItemShare": 0.1
+        },
+        {
+          "itemName": "미트라의 분노 : 궁수",
+          "count": 2,
+          "slotItemShare": 0.1
+        },
+        {
+          "itemName": "미트라의 분노 : 도적",
+          "count": 2,
+          "slotItemShare": 0.1
+        },
+        {
+          "itemName": "골드 시그너스 엠블렘",
+          "count": 1,
+          "slotItemShare": 0.05
+        },
+        {
+          "itemName": "골드 히어로즈 엠블렘",
+          "count": 1,
+          "slotItemShare": 0.05
+        },
+        {
+          "itemName": "미트라의 분노 : 해적",
+          "count": 1,
+          "slotItemShare": 0.05
+        }
+      ],
+      "예비 특수 반지": [
+        {
+          "itemName": "컨티뉴어스 링",
+          "count": 9,
+          "slotItemShare": 1
+        }
+      ],
+      "장갑": [
+        {
+          "itemName": "에테르넬 나이트글러브",
+          "count": 4,
+          "slotItemShare": 0.2
+        },
+        {
+          "itemName": "에테르넬 메이지글러브",
+          "count": 3,
+          "slotItemShare": 0.15
+        },
+        {
+          "itemName": "도전자의 장갑",
+          "count": 2,
+          "slotItemShare": 0.1
+        },
+        {
+          "itemName": "아케인셰이드 나이트글러브",
+          "count": 2,
+          "slotItemShare": 0.1
+        },
+        {
+          "itemName": "아케인셰이드 메이지글러브",
+          "count": 2,
+          "slotItemShare": 0.1
+        },
+        {
+          "itemName": "아케인셰이드 시프글러브",
+          "count": 1,
+          "slotItemShare": 0.05
+        },
+        {
+          "itemName": "아케인셰이드 아처글러브",
+          "count": 1,
+          "slotItemShare": 0.05
+        },
+        {
+          "itemName": "앱솔랩스 시프글러브",
+          "count": 1,
+          "slotItemShare": 0.05
+        },
+        {
+          "itemName": "앱솔랩스 아처글러브",
+          "count": 1,
+          "slotItemShare": 0.05
+        },
+        {
+          "itemName": "에테르넬 시프글러브",
+          "count": 1,
+          "slotItemShare": 0.05
+        },
+        {
+          "itemName": "에테르넬 아처글러브",
+          "count": 1,
+          "slotItemShare": 0.05
+        },
+        {
+          "itemName": "에테르넬 파이렛글러브",
+          "count": 1,
+          "slotItemShare": 0.05
+        }
+      ],
+      "펜던트": [
+        {
+          "itemName": "데이브레이크 펜던트",
+          "count": 13,
+          "slotItemShare": 0.325
+        },
+        {
+          "itemName": "정령의 펜던트",
+          "count": 7,
+          "slotItemShare": 0.175
+        },
+        {
+          "itemName": "도미네이터 펜던트",
+          "count": 6,
+          "slotItemShare": 0.15
+        },
+        {
+          "itemName": "고통의 근원",
+          "count": 5,
+          "slotItemShare": 0.125
+        },
+        {
+          "itemName": "베어스 그린 펜던트",
+          "count": 3,
+          "slotItemShare": 0.075
+        },
+        {
+          "itemName": "그리드 펜던트",
+          "count": 1,
+          "slotItemShare": 0.025
+        },
+        {
+          "itemName": "매커네이터 펜던트",
+          "count": 1,
+          "slotItemShare": 0.025
+        },
+        {
+          "itemName": "아울스 레드 펜던트",
+          "count": 1,
+          "slotItemShare": 0.025
+        },
+        {
+          "itemName": "죽음의 맹세",
+          "count": 1,
+          "slotItemShare": 0.025
+        },
+        {
+          "itemName": "피콕스 레드 펜던트",
+          "count": 1,
+          "slotItemShare": 0.025
+        },
+        {
+          "itemName": "피콕스 퍼플 펜던트",
+          "count": 1,
+          "slotItemShare": 0.025
+        }
+      ],
+      "포켓 아이템": [
+        {
+          "itemName": "저주받은 적의 마도서",
+          "count": 6,
+          "slotItemShare": 0.3
+        },
+        {
+          "itemName": "저주받은 청의 마도서",
+          "count": 6,
+          "slotItemShare": 0.3
+        },
+        {
+          "itemName": "저주받은 녹의 마도서",
+          "count": 4,
+          "slotItemShare": 0.2
+        },
+        {
+          "itemName": "저주받은 황의 마도서",
+          "count": 3,
+          "slotItemShare": 0.15
+        },
+        {
+          "itemName": "핑크빛 성배",
+          "count": 1,
+          "slotItemShare": 0.05
+        }
+      ],
+      "하의": [
+        {
+          "itemName": "에테르넬 나이트팬츠",
+          "count": 6,
+          "slotItemShare": 0.3
+        },
+        {
+          "itemName": "도전자의 하의",
+          "count": 3,
+          "slotItemShare": 0.15
+        },
+        {
+          "itemName": "에테르넬 메이지팬츠",
+          "count": 3,
+          "slotItemShare": 0.15
+        },
+        {
+          "itemName": "에테르넬 시프팬츠",
+          "count": 3,
+          "slotItemShare": 0.15
+        },
+        {
+          "itemName": "에테르넬 아처팬츠",
+          "count": 3,
+          "slotItemShare": 0.15
+        },
+        {
+          "itemName": "트릭스터 던위치팬츠",
+          "count": 1,
+          "slotItemShare": 0.05
+        },
+        {
+          "itemName": "트릭스터 레인져팬츠",
+          "count": 1,
+          "slotItemShare": 0.05
+        }
+      ],
+      "훈장": [
+        {
+          "itemName": "THE RED",
+          "count": 6,
+          "slotItemShare": 0.3
+        },
+        {
+          "itemName": "칠요의 몬스터파커",
+          "count": 5,
+          "slotItemShare": 0.25
+        },
+        {
+          "itemName": "불멸의 유산",
+          "count": 4,
+          "slotItemShare": 0.2
+        },
+        {
+          "itemName": "카오스 벨룸 킬러",
+          "count": 2,
+          "slotItemShare": 0.1
+        },
+        {
+          "itemName": "THE BLACK",
+          "count": 2,
+          "slotItemShare": 0.1
+        },
+        {
+          "itemName": "챌린저스 월드4 시즌4 챌린저",
+          "count": 1,
+          "slotItemShare": 0.05
+        }
+      ]
+    }
+  },
+  "jobs": {
+    "레테": {
+      "sampleSize": 4,
+      "slots": {
+        "귀고리": [
+          {
+            "itemName": "커맨더 포스 이어링",
+            "count": 2,
+            "slotItemShare": 0.5
+          },
+          {
+            "itemName": "하프 이어링",
+            "count": 2,
+            "slotItemShare": 0.5
+          }
+        ],
+        "기계 심장": [
+          {
+            "itemName": "플라즈마 하트",
+            "count": 3,
+            "slotItemShare": 0.75
+          },
+          {
+            "itemName": "컴플리트 언더컨트롤",
+            "count": 1,
+            "slotItemShare": 0.25
+          }
+        ],
+        "눈장식": [
+          {
+            "itemName": "미카엘라의 새 안경",
+            "count": 2,
+            "slotItemShare": 0.5
+          },
+          {
+            "itemName": "마력이 깃든 안대",
+            "count": 1,
+            "slotItemShare": 0.25
+          },
+          {
+            "itemName": "블랙빈 마크",
+            "count": 1,
+            "slotItemShare": 0.25
+          }
+        ],
+        "망토": [
+          {
+            "itemName": "도전자의 망토",
+            "count": 2,
+            "slotItemShare": 0.5
+          },
+          {
+            "itemName": "아케인셰이드 메이지케이프",
+            "count": 1,
+            "slotItemShare": 0.25
+          },
+          {
+            "itemName": "에테르넬 메이지케이프",
+            "count": 1,
+            "slotItemShare": 0.25
+          }
+        ],
+        "모자": [
+          {
+            "itemName": "도전자의 모자",
+            "count": 2,
+            "slotItemShare": 0.5
+          },
+          {
+            "itemName": "에테르넬 메이지햇",
+            "count": 2,
+            "slotItemShare": 0.5
+          }
+        ],
+        "무기": [
+          {
+            "itemName": "제네시스 카르타",
+            "count": 4,
+            "slotItemShare": 1
+          }
+        ],
+        "반지": [
+          {
+            "itemName": "마이스터링",
+            "count": 4,
+            "slotItemShare": 0.25
+          },
+          {
+            "itemName": "여명의 가디언 엔젤 링",
+            "count": 4,
+            "slotItemShare": 0.25
+          },
+          {
+            "itemName": "테네브리스 원정대 반지",
+            "count": 3,
+            "slotItemShare": 0.1875
+          },
+          {
+            "itemName": "이터널 플레임 링",
+            "count": 2,
+            "slotItemShare": 0.125
+          },
+          {
+            "itemName": "리스트레인트 링",
+            "count": 1,
+            "slotItemShare": 0.0625
+          },
+          {
+            "itemName": "마이스터 올마이티링",
+            "count": 1,
+            "slotItemShare": 0.0625
+          },
+          {
+            "itemName": "카오스 링",
+            "count": 1,
+            "slotItemShare": 0.0625
+          }
+        ],
+        "뱃지": [
+          {
+            "itemName": "크리스탈 웬투스 뱃지",
+            "count": 3,
+            "slotItemShare": 0.75
+          },
+          {
+            "itemName": "창세의 뱃지",
+            "count": 1,
+            "slotItemShare": 0.25
+          }
+        ],
+        "벨트": [
+          {
+            "itemName": "몽환의 벨트",
+            "count": 3,
+            "slotItemShare": 0.75
+          },
+          {
+            "itemName": "골든 클로버 벨트",
+            "count": 1,
+            "slotItemShare": 0.25
+          }
+        ],
+        "보조무기": [
+          {
+            "itemName": "블랙 마법깃펜",
+            "count": 2,
+            "slotItemShare": 0.5
+          },
+          {
+            "itemName": "녹스 마법깃펜",
+            "count": 1,
+            "slotItemShare": 0.25
+          },
+          {
+            "itemName": "이볼빙 녹스 마법깃펜",
+            "count": 1,
+            "slotItemShare": 0.25
+          }
+        ],
+        "상의": [
+          {
+            "itemName": "도전자의 상의",
+            "count": 2,
+            "slotItemShare": 0.5
+          },
+          {
+            "itemName": "에테르넬 메이지로브",
+            "count": 2,
+            "slotItemShare": 0.5
+          }
+        ],
+        "신발": [
+          {
+            "itemName": "도전자의 신발",
+            "count": 2,
+            "slotItemShare": 0.5
+          },
+          {
+            "itemName": "아케인셰이드 메이지슈즈",
+            "count": 1,
+            "slotItemShare": 0.25
+          },
+          {
+            "itemName": "에테르넬 메이지슈즈",
+            "count": 1,
+            "slotItemShare": 0.25
+          }
+        ],
+        "어깨장식": [
+          {
+            "itemName": "도전자의 어깨장식",
+            "count": 2,
+            "slotItemShare": 0.5
+          },
+          {
+            "itemName": "아케인셰이드 메이지숄더",
+            "count": 1,
+            "slotItemShare": 0.25
+          },
+          {
+            "itemName": "에테르넬 메이지숄더",
+            "count": 1,
+            "slotItemShare": 0.25
+          }
+        ],
+        "얼굴장식": [
+          {
+            "itemName": "루즈 컨트롤 머신 마크",
+            "count": 2,
+            "slotItemShare": 0.5
+          },
+          {
+            "itemName": "레드 매지션 마이스터 심볼",
+            "count": 1,
+            "slotItemShare": 0.25
+          },
+          {
+            "itemName": "트와일라이트 마크",
+            "count": 1,
+            "slotItemShare": 0.25
+          }
+        ],
+        "엠블렘": [
+          {
+            "itemName": "미트라의 분노 : 마법사",
+            "count": 4,
+            "slotItemShare": 1
+          }
+        ],
+        "예비 특수 반지": [
+          {
+            "itemName": "컨티뉴어스 링",
+            "count": 1,
+            "slotItemShare": 1
+          }
+        ],
+        "장갑": [
+          {
+            "itemName": "에테르넬 메이지글러브",
+            "count": 2,
+            "slotItemShare": 0.5
+          },
+          {
+            "itemName": "도전자의 장갑",
+            "count": 1,
+            "slotItemShare": 0.25
+          },
+          {
+            "itemName": "아케인셰이드 메이지글러브",
+            "count": 1,
+            "slotItemShare": 0.25
+          }
+        ],
+        "펜던트": [
+          {
+            "itemName": "데이브레이크 펜던트",
+            "count": 3,
+            "slotItemShare": 0.375
+          },
+          {
+            "itemName": "정령의 펜던트",
+            "count": 3,
+            "slotItemShare": 0.375
+          },
+          {
+            "itemName": "도미네이터 펜던트",
+            "count": 1,
+            "slotItemShare": 0.125
+          },
+          {
+            "itemName": "베어스 그린 펜던트",
+            "count": 1,
+            "slotItemShare": 0.125
+          }
+        ],
+        "포켓 아이템": [
+          {
+            "itemName": "저주받은 청의 마도서",
+            "count": 4,
+            "slotItemShare": 1
+          }
+        ],
+        "하의": [
+          {
+            "itemName": "도전자의 하의",
+            "count": 2,
+            "slotItemShare": 0.5
+          },
+          {
+            "itemName": "에테르넬 메이지팬츠",
+            "count": 2,
+            "slotItemShare": 0.5
+          }
+        ],
+        "훈장": [
+          {
+            "itemName": "THE BLACK",
+            "count": 2,
+            "slotItemShare": 0.5
+          },
+          {
+            "itemName": "THE RED",
+            "count": 2,
+            "slotItemShare": 0.5
+          }
+        ]
+      }
+    }
+  }
+}

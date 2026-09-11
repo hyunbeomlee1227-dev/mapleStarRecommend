@@ -7,6 +7,7 @@
     "dev": "node --env-file-if-exists=.env server/index.js",
     "start": "node --env-file-if-exists=.env server/index.js --production",
     "build": "vite build",
+    "refresh:equipment-baselines": "node --env-file-if-exists=.env scripts/refresh-equipment-baselines.js",
     "test": "node --test test/*.test.js",
     "test:browser": "playwright test"
   },
@@ -14,6 +15,7 @@
     "cheerio": "^1.2.0",
     "express": "^5.2.1",
     "lucide-react": "^1.43.0",
+    "proper-lockfile": "^4.1.2",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "zod": "^4.5.4"

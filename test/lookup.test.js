@@ -80,6 +80,10 @@ test('request limit cannot be bypassed by spoofed forwarded headers', async () =
   const result = await request(app).get('/api/character?name=검증').set('X-Forwarded-For', '5.6.7.8');
   assert.equal(result.status, 429); assert.equal(result.headers['retry-after'], '60');
 });
+test('invalid request limit configuration is rejected before calling upstream', () => {
+  assert.throws(() => createNexonService({ apiKey: 'key', intervalMs: Number.NaN }), { code: 'SERVICE_CONFIGURATION' });
+  assert.throws(() => createNexonService({ apiKey: 'key', dailyLimit: 0 }), { code: 'SERVICE_CONFIGURATION' });
+});
 test('daily request budget survives service restart', async () => {
   const folder = await mkdtemp(join(tmpdir(), 'maple-test-'));
   try {
@@ -103,4 +107,38 @@ test('KST cutoff uses the latest completed day; image URLs reject third parties'
   assert.equal(snapshotDate(Date.parse('2026-09-08T17:00:00Z')), '2026-09-08');
   assert.equal(safeImage('https://nexon.com.evil.example/a'), null);
   assert.equal(safeImage('javascript:alert(1)'), null);
+});
+
+test('raw NEXON requests omit blank optional query parameters', async () => {
+  let requestedUrl;
+  const service = createNexonService({
+    apiKey: 'server-only-secret', now, intervalMs: 0,
+    fetchImpl: async (url) => { requestedUrl = new URL(url); return Response.json({ ranking: [] }); },
+  });
+  await service.requestRaw('ranking/dojang', { date: '2026-09-10', world_name: '', difficulty: '1', class: '', page: '1' });
+
+  assert.equal(requestedUrl.searchParams.get('date'), '2026-09-10');
+  assert.equal(requestedUrl.searchParams.get('difficulty'), '1');
+  assert.equal(requestedUrl.searchParams.has('world_name'), false);
+  assert.equal(requestedUrl.searchParams.has('class'), false);
+});
+
+test('separate NEXON clients serialize updates to a shared quota file', async () => {
+  const folder = await mkdtemp(join(tmpdir(), 'maple-quota-lock-'));
+  try {
+    const quotaFile = join(folder, 'quota.json');
+    const options = {
+      apiKey: 'server-only-secret', now, intervalMs: 0, quotaFile,
+      fetchImpl: async () => Response.json({ ranking: [] }),
+    };
+    const first = createNexonService(options);
+    const second = createNexonService(options);
+    await Promise.all([
+      first.requestRaw('ranking/dojang', { date: '2026-09-08', difficulty: '1' }),
+      second.requestRaw('ranking/dojang', { date: '2026-09-08', difficulty: '1' }),
+    ]);
+    assert.equal(JSON.parse(await readFile(quotaFile, 'utf8')).count, 2);
+  } finally {
+    await rm(folder, { recursive: true, force: true });
+  }
 });

@@ -38,7 +38,7 @@
     },
     {
       "id": "common-dawn-accessories-22",
-      "itemNames": ["트와일라이트 마크", "데이브레이크 펜던트", "가디언 엔젤 링"],
+      "itemNames": ["트와일라이트 마크", "데이브레이크 펜던트", "가디언 엔젤 링", "여명의 가디언 엔젤 링"],
       "minGoalOrder": 20,
       "maxGoalOrder": 70,
       "target": { "starforce": 22 },

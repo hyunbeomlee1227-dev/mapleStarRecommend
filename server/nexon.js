@@ -1,7 +1,7 @@
 import { z } from 'zod';
-import { mkdir, readFile, writeFile, rename } from 'node:fs/promises';
-import { dirname } from 'node:path';
+import { readFile, rename, writeFile } from 'node:fs/promises';
 import { buildCombatSnapshot } from './combat.js';
+import { withFileLock } from './file-lock.js';
 
 export class LookupError extends Error {
   constructor(code, message, status = 502) { super(message); this.code = code; this.status = status; }
@@ -58,40 +58,55 @@ export function normalizeSnapshot(raw, requestedDate, fetchedAt) {
 }
 
 export function createNexonService({ apiKey, fetchImpl = fetch, now = Date.now, intervalMs = 250, dailyLimit = 1000, quotaFile, cacheTtl = 15 * 60000, maxCache = 100, sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms)) }) {
+  if (!Number.isSafeInteger(intervalMs) || intervalMs < 0 || !Number.isSafeInteger(dailyLimit) || dailyLimit < 1) {
+    throw new LookupError('SERVICE_CONFIGURATION', 'NEXON API 호출 제한 설정이 올바르지 않습니다.', 503);
+  }
   const cache = new Map();
   const pending = new Map();
   let queue = Promise.resolve();
   let lastStart = -Infinity;
   let quota;
+  async function withQuotaLock(task) {
+    if (!quotaFile) return task();
+    try {
+      return await withFileLock(`${quotaFile}.locks`, task, { sleep });
+    } catch (error) {
+      if (error.message === 'FILE_LOCK_TIMEOUT') throw new LookupError('QUOTA_STORAGE', '조회량 기록이 사용 중입니다. 잠시 후 다시 시도해 주세요.', 503);
+      throw error;
+    }
+  }
   async function reserve() {
     const day = new Date(now() + 9 * 3600000).toISOString().slice(0, 10);
-    if (!quota) {
-      try { quota = quotaFile ? JSON.parse(await readFile(quotaFile, 'utf8')) : { day, count: 0 }; }
+    return withQuotaLock(async () => {
+      try { quota = quotaFile ? JSON.parse(await readFile(quotaFile, 'utf8')) : quota ?? { day, count: 0 }; }
       catch (error) {
         if (error.code !== 'ENOENT') throw new LookupError('QUOTA_STORAGE', '조회량 기록을 확인할 수 없습니다. 잠시 후 다시 시도해 주세요.', 503);
         quota = { day, count: 0 };
       }
       if (typeof quota.day !== 'string' || !Number.isSafeInteger(quota.count) || quota.count < 0) throw new LookupError('QUOTA_STORAGE', '조회량 기록을 확인할 수 없습니다.', 503);
-    }
-    if (quota.day !== day) quota = { day, count: 0 };
-    if (quota.count >= dailyLimit) throw new LookupError('DAILY_LIMIT', '오늘의 캐릭터 조회 한도에 도달했습니다. 내일 다시 이용해 주세요.', 429);
-    quota.count += 1;
-    if (quotaFile) {
-      try {
-        await mkdir(dirname(quotaFile), { recursive: true });
-        await writeFile(`${quotaFile}.tmp`, JSON.stringify(quota));
-        await rename(`${quotaFile}.tmp`, quotaFile);
-      } catch { throw new LookupError('QUOTA_STORAGE', '조회량을 기록할 수 없어 요청을 중단했습니다.', 503); }
-    }
+      if (quota.day !== day) quota = { day, count: 0 };
+      if (quota.count >= dailyLimit) throw new LookupError('DAILY_LIMIT', '오늘의 캐릭터 조회 한도에 도달했습니다. 내일 다시 이용해 주세요.', 429);
+      quota.count += 1;
+      if (quotaFile) {
+        try {
+          const temporaryFile = `${quotaFile}.${process.pid}.tmp`;
+          await writeFile(temporaryFile, JSON.stringify(quota));
+          await rename(temporaryFile, quotaFile);
+        } catch { throw new LookupError('QUOTA_STORAGE', '조회량을 기록할 수 없어 요청을 중단했습니다.', 503); }
+      }
+    });
   }
   function request(path, params) {
+    if (!apiKey) return Promise.reject(new LookupError('NOT_CONFIGURED', 'NEXON API 연결 설정이 필요합니다.', 503));
     const job = queue.then(async () => {
       const delay = intervalMs - (now() - lastStart);
       if (delay > 0) await sleep(delay);
       await reserve();
       lastStart = now();
       const url = new URL(`https://open.api.nexon.com/maplestory/v1/${path}`);
-      Object.entries(params).forEach(([key, val]) => url.searchParams.set(key, val));
+      Object.entries(params).forEach(([key, val]) => {
+        if (val !== '' && val !== null && val !== undefined) url.searchParams.set(key, val);
+      });
       let response;
       try { response = await fetchImpl(url, { headers: { 'x-nxopen-api-key': apiKey }, signal: AbortSignal.timeout(10000) }); }
       catch { throw new LookupError('UPSTREAM_UNAVAILABLE', '넥슨 서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.', 503); }
@@ -138,5 +153,5 @@ export function createNexonService({ apiKey, fetchImpl = fetch, now = Date.now, 
     pending.set(key, job);
     try { return await job; } finally { pending.delete(key); }
   }
-  return { lookup, configured: Boolean(apiKey) };
+  return { lookup, requestRaw: request, configured: Boolean(apiKey) };
 }

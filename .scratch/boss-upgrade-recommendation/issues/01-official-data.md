@@ -2,7 +2,7 @@
 
 Status: ready-for-agent
 Type: research
-Progress: source-survey-complete; numeric-validation-pending
+Progress: source-survey-complete; authenticated-response-verified; numeric-validation-pending
 Depends on: none
 
 ## 완료 기준
@@ -26,3 +26,10 @@ Depends on: none
 - 문서 필드 매핑은 확인했으나 인증된 실응답은 미검증이다. 03 작업에서 검증한다.
 - 최신 스타포스 수치 전체와 잠재 옵션별 조합 확률은 아직 확보하지 못했다. [08 수치 검증](08-rule-data.md)으로 추적한다. 이 티켓을 전체 수치 검증 완료로 취급하지 않는다.
 - 02의 모델 조사와 03의 서비스 기반은 확인된 문서를 사용해 진행 가능하다. 정밀 추천 공개는 08 및 직업별 검증 이후다.
+
+## 2026-09-12 공식 무릉 표본 검증
+
+- NEXON 공식 무릉도장 랭킹과 캐릭터 장비 API를 인증된 실제 응답으로 연결했다.
+- 2026-09-10 상위 20명 장비를 모두 조회했으며 캐릭터 이름과 OCID는 저장하지 않고 직업·슬롯·아이템 사용 수만 집계했다.
+- 빈 월드·직업 선택 파라미터는 NEXON에서 오류가 되므로 URL에서 제외하도록 공통 클라이언트를 보정했다.
+- 표본에는 이벤트 장비와 교환용 아이템이 섞일 수 있어 집계 결과를 자동 구매 추천으로 사용하지 않는다.
