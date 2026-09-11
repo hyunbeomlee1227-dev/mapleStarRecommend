@@ -12,8 +12,10 @@ const value = z.union([z.string().max(2000), z.number().finite()]).nullable().op
 const options = z.record(z.string(), value).nullable().optional();
 const itemSchema = z.object({
   item_name: z.string(), item_equipment_slot: z.string(), item_equipment_part: value,
-  item_icon: value, starforce: value, starforce_scroll_flag: value,
-  scroll_upgrade: value, scroll_upgradeable_count: value, golden_hammer_flag: value, cuttable_count: value,
+  item_icon: value, item_description: value, item_shape_name: value, item_shape_icon: value, item_gender: value,
+  starforce: value, starforce_scroll_flag: value, equipment_level_increase: value,
+  growth_exp: value, growth_level: value, special_ring_level: value,
+  scroll_upgrade: value, scroll_upgradeable_count: value, scroll_resilience_count: value, golden_hammer_flag: value, cuttable_count: value,
   soul_name: value, soul_option: value,
   potential_option_grade: value, additional_potential_option_grade: value,
   potential_option_1: value, potential_option_2: value, potential_option_3: value,
@@ -48,7 +50,7 @@ export function normalizeSnapshot(raw, requestedDate, fetchedAt) {
   return {
     source: 'nexon', date: requestedDate, fetchedAt, preset: equipment.preset_no ?? null,
     character: { name: basic.character_name, job: basic.character_class, level: basic.character_level, world: basic.world_name, image: safeImage(basic.character_image) },
-    items: equipment.item_equipment.map((item) => ({ ...item, item_icon: safeImage(item.item_icon) })),
+    items: equipment.item_equipment.map((item) => ({ ...item, item_icon: safeImage(item.item_icon), item_shape_icon: safeImage(item.item_shape_icon) })),
     stats: stat.final_stat, sets: set.set_effect,
     combat: buildCombatSnapshot(stat.final_stat),
     analysis: { status: 'unverified', message: '직업별 계산과 보스 목표 기준 검증 전입니다.' },

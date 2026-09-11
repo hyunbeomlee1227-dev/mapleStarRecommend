@@ -44,7 +44,7 @@ export function assessGoal(snapshot, goal) {
   if (goal.benchmark.status !== 'calibrated') {
     return {
       status: 'benchmark-pending',
-      message: '이 보스의 솔로 클리어 기준은 아직 관리자 검증 전입니다.',
+      message: '이 보스의 솔로 클리어 기준은 아직 검증 전입니다.',
     };
   }
   return { status: 'model-pending', message: '직업별 전투 모델 검증 전에는 목표 충족 여부를 판정하지 않습니다.' };

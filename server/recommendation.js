@@ -120,7 +120,7 @@ function equipmentRecommendations(goal, items, equipmentTargets) {
     if (!actions.length) return [];
     return [{
       ruleId: rule.id,
-      sourceKind: 'administrator',
+      sourceKind: 'curated-rule',
       itemName: item.item_name,
       slot: item.item_equipment_slot,
       current: { starforce: currentStarforce },
@@ -157,7 +157,7 @@ export function buildRecommendationPlan({ goal, mode, budgetMesos, combat, items
     equipmentTargetTrace: {
       version: equipmentTargets?.version ?? null,
       updatedAt: equipmentTargets?.updatedAt ?? null,
-      sourceKind: 'administrator',
+      sourceKind: 'curated-rule',
       budgetApplied: false,
     },
     supportedCalculations: {

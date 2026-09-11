@@ -28,7 +28,7 @@ test('missing combat stats block goal assessment', () => {
 
 test('uncalibrated boss goals never report a clear or a damage estimate', () => {
   const result = assessGoal(buildCombatSnapshot(completeStats), { id: 'lotus-extreme', benchmark: { status: 'pending' } });
-  assert.deepEqual(result, { status: 'benchmark-pending', message: '이 보스의 솔로 클리어 기준은 아직 관리자 검증 전입니다.' });
+  assert.deepEqual(result, { status: 'benchmark-pending', message: '이 보스의 솔로 클리어 기준은 아직 검증 전입니다.' });
 });
 
 test('official goal catalog is ordered and defaults to its final supported goal', async () => {

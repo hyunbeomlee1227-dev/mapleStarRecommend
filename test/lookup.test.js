@@ -20,6 +20,13 @@ test('successful lookup preserves equipment details, caches and coalesces withou
   assert.equal(first.status, 200); assert.equal(second.status, 200); assert.equal(calls.length, 5);
   assert.equal(first.body.items[0].item_add_option.str, '60');
   assert.equal(first.body.items[0].item_total_option.base_equipment_level, 200);
+  assert.equal(first.body.items[0].item_description, '검증용 장비 설명');
+  assert.equal(first.body.items[0].item_shape_name, '검증 장갑 외형');
+  assert.equal(first.body.items[0].item_shape_icon, 'https://open.api.nexon.com/static/maplestory/item/shape.png');
+  assert.equal(first.body.items[0].item_gender, '공용');
+  assert.equal(first.body.items[0].equipment_level_increase, 3);
+  assert.equal(first.body.items[0].growth_level, 2);
+  assert.equal(first.body.items[0].scroll_resilience_count, '1');
   assert.equal(first.body.analysis.status, 'unverified');
   assert.equal(first.body.date, '2026-09-08');
   assert.ok(!first.text.includes('server-only-secret')); assert.ok(!first.text.includes('test-ocid'));

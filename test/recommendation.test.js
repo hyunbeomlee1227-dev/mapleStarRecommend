@@ -16,7 +16,7 @@ const equipmentTargets = {
     minGoalOrder: 0,
     maxGoalOrder: 20,
     target: { starforce: 22 },
-    reason: '익스트림 스우 미만 솔로 보스 목표에서 사용하는 관리자 기준 장비 목표입니다.',
+    reason: '익스트림 스우 미만 솔로 보스 목표에서 사용하는 장비 목표입니다.',
   }],
 };
 const combat = { readiness: 'snapshot-ready', message: 'ready' };
@@ -39,18 +39,18 @@ test('budget mode requires a positive integer mesos budget', () => {
   assert.equal(recommendationRequestSchema.safeParse({ goalId: goal.id, mode: 'budget', budgetMesos: 1_000_000_000, combat, items }).success, true);
 });
 
-test('administrator equipment target recommends Estella 22 stars only below Extreme Lotus', () => {
+test('curated equipment target recommends Estella 22 stars only below Extreme Lotus', () => {
   const estella = { item_name: '에스텔라 이어링', item_equipment_slot: '귀고리', baseEquipmentLevel: 160, starforce: '17', potential_option_grade: '유니크', additional_potential_option_grade: '에픽' };
   const result = buildRecommendationPlan({ goal, mode: 'all', budgetMesos: null, combat, items: [estella], equipmentTargets });
   assert.deepEqual(result.equipmentRecommendations, [{
     ruleId: 'estella-22-before-extreme-lotus',
-    sourceKind: 'administrator',
+    sourceKind: 'curated-rule',
     itemName: '에스텔라 이어링',
     slot: '귀고리',
     current: { starforce: 17 },
     target: { starforce: 22 },
     actions: ['스타포스 17성 -> 22성'],
-    reason: '익스트림 스우 미만 솔로 보스 목표에서 사용하는 관리자 기준 장비 목표입니다.',
+    reason: '익스트림 스우 미만 솔로 보스 목표에서 사용하는 장비 목표입니다.',
   }]);
   assert.equal(result.equipmentTargetTrace.version, 'test-v1');
   assert.equal(result.equipmentTargetTrace.budgetApplied, false);
@@ -63,9 +63,9 @@ test('administrator equipment target recommends Estella 22 stars only below Extr
   assert.deepEqual(completedResult.equipmentRecommendations, []);
 });
 
-test('administrator equipment target catalog is validated and versioned', async () => {
+test('equipment target catalog is validated and versioned', async () => {
   const catalog = await loadEquipmentTargets();
-  assert.equal(catalog.version, '2026-09-11-v1');
+  assert.equal(catalog.version, '2026-09-11-v2');
   assert.equal(catalog.rules[0].id, 'estella-22-before-extreme-lotus');
 });
 

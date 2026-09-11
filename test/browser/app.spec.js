@@ -10,7 +10,7 @@ test('equipment browsing, filters, detail and status remain usable', async ({ pa
   await expect(page.getByLabel('난이도', { exact: true })).toHaveValue('lotus-hard');
   await page.getByLabel('난이도', { exact: true }).selectOption('lotus-extreme');
   await expect(page.getByText('스우 익스트림 기준 강화 우선순위')).toBeVisible();
-  await expect(page.getByText('이 보스의 솔로 클리어 기준은 아직 관리자 검증 전입니다.')).toBeVisible();
+  await expect(page.getByText('이 보스의 솔로 클리어 기준은 아직 검증 전입니다.')).toBeVisible();
   await page.reload();
   await expect(page.getByLabel('보스', { exact: true })).toHaveValue('스우');
   await expect(page.getByLabel('난이도', { exact: true })).toHaveValue('lotus-extreme');
@@ -20,15 +20,22 @@ test('equipment browsing, filters, detail and status remain usable', async ({ pa
   await page.getByRole('button', { name: '에스텔라 이어링 상세 보기' }).click();
   const detail = info.project.name === 'mobile' ? page.locator('.mobile-detail') : page.locator('.details-panel');
   await expect(detail).toBeVisible();
-  await expect(detail.getByRole('heading', { name: '장비 옵션' })).toBeVisible();
-  await expect(detail.getByRole('heading', { name: '기본 옵션' })).toBeVisible();
-  await expect(detail.getByRole('heading', { name: '추가옵션' })).toBeVisible();
-  await expect(detail.getByRole('heading', { name: '업그레이드 증가량' })).toBeVisible();
-  await expect(detail.getByRole('heading', { name: '스타포스 증가량' })).toBeVisible();
+  await expect(detail.locator('.equipment-tooltip')).toBeVisible();
+  await expect(detail.locator('.tooltip-stars svg')).toHaveCount(17);
+  await expect(detail.getByRole('heading', { name: '에스텔라 이어링 (+8)' })).toBeVisible();
+  await expect(detail.getByText('요구 레벨 Lv. 150', { exact: true })).toBeVisible();
+  await expect(detail.locator('[data-stat="str"]')).toContainText('+102');
+  await expect(detail.locator('[data-stat="str"]')).toContainText('(30+40+12+20)');
+  await expect(detail.getByText('주문서 강화 8회', { exact: false })).toBeVisible();
+  await expect(detail.getByText('강화 종류', { exact: true })).toBeVisible();
+  await expect(detail.getByText('Open API 미제공', { exact: true })).toBeVisible();
+  await expect(detail.locator('.tooltip-scroll-result')).toContainText('STR +12');
+  await expect(detail.locator('.tooltip-scroll-result')).toContainText('공격력 +8');
   await expect(detail.getByRole('heading', { name: '잠재능력', exact: true })).toBeVisible();
   await expect(detail.getByRole('heading', { name: '에디셔널 잠재능력', exact: true })).toBeVisible();
+  expect(await detail.locator('.equipment-tooltip').evaluate((element) => getComputedStyle(element).backgroundColor)).toBe('rgb(35, 37, 44)');
   if (info.project.name === 'mobile') await page.getByLabel('장비 상세 닫기').click();
-  else await expect(detail.locator('h3')).toHaveText('에스텔라 이어링');
+  else await expect(detail.locator('h3')).toHaveText('에스텔라 이어링 (+8)');
   await page.getByLabel('장비 검색', { exact: true }).fill('');
   await page.getByLabel('잠재능력 등급 필터').selectOption('레전드리');
   await expect(page.locator('.item-row')).toHaveCount(5);
@@ -46,13 +53,15 @@ test('equipment browsing, filters, detail and status remain usable', async ({ pa
   await page.getByRole('tab', { name: '잠재능력', exact: true }).click();
   await expect(page.getByText('등급 상승 참고')).toBeVisible();
   await expect(page.getByText('38,250,000 메소').first()).toBeVisible();
+  expect(await page.locator('.analysis-tabs').evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+  expect(await page.locator('.tier-table').evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
   await page.getByRole('tab', { name: '스타포스', exact: true }).click();
   await expect(page.getByRole('heading', { name: '스타포스 강화' })).toBeVisible();
   await expect(page.getByText('16.85%', { exact: true }).first()).toBeVisible();
   await expect(page.getByText('3,151,795,078 메소', { exact: true }).first()).toBeVisible();
   await expect(page.getByText('강화 규칙 2/5 검증')).toBeVisible();
   await page.getByText('강화 규칙 2/5 검증').click();
-  await expect(page.getByText('2026-09-11-v4 · 2026-09-11')).toBeVisible();
+  await expect(page.getByText('2026-09-11-v5 · 2026-09-11')).toBeVisible();
   await expect(page.getByText('잠재 재설정 비용', { exact: true })).toBeVisible();
   await expect(page.getByText('스타포스 기대 비용', { exact: true })).toBeVisible();
   await expect(page.getByText('순위 계산 대기', { exact: true })).toBeVisible();
@@ -61,7 +70,7 @@ test('equipment browsing, filters, detail and status remain usable', async ({ pa
   expect(errors).toEqual([]);
 });
 
-test('administrator equipment goals are shown for the selected solo boss range', async ({ page }) => {
+test('boss equipment goals are shown for the selected solo boss range', async ({ page }) => {
   await page.goto('/');
   await page.getByLabel('보스', { exact: true }).selectOption('스우');
   await expect(page.getByLabel('난이도', { exact: true })).toHaveValue('lotus-hard');
@@ -69,7 +78,8 @@ test('administrator equipment goals are shown for the selected solo boss range',
   await expect(page.getByText('에스텔라 이어링', { exact: true }).last()).toBeVisible();
   await expect(page.getByText('스타포스 17성 -> 22성', { exact: true })).toBeVisible();
   await page.getByLabel('난이도', { exact: true }).selectOption('lotus-extreme');
-  await expect(page.getByText('이 보스 구간에 등록된 관리자 장비 목표가 없습니다.')).toBeVisible();
+  await expect(page.getByText('이 보스 구간에 등록된 장비 목표가 없습니다.')).toBeVisible();
+  await expect(page.getByText('관리자 기준', { exact: true })).toHaveCount(0);
 });
 
 test('real lookup UI uses server response and recent searches can be deleted', async ({ page }) => {
@@ -113,7 +123,7 @@ test('selected equipment can load official regular and additional potential opti
   await page.getByRole('button', { name: '공식 잠재 옵션표 보기' }).click();
   await expect(page.getByRole('dialog', { name: '공식 잠재 옵션표' })).toBeVisible();
   await expect(page.locator('dialog:open')).toHaveCount(1);
-  await expect(page.getByText('보스 몬스터 공격 시 데미지 +40%')).toBeVisible();
+  await expect(page.getByRole('dialog', { name: '공식 잠재 옵션표' }).getByText('보스 몬스터 공격 시 데미지 +40%')).toBeVisible();
   await page.screenshot({ path: `test-results/potential-options-${info.project.name}.png`, fullPage: true });
   expect(await page.getByRole('dialog', { name: '공식 잠재 옵션표' }).evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
   await page.getByRole('button', { name: '에디셔널' }).click();
