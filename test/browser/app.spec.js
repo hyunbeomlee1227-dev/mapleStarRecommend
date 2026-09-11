@@ -23,20 +23,22 @@ test('equipment browsing, filters, detail and status remain usable', async ({ pa
   await page.getByLabel('장비 검색', { exact: true }).fill('');
   await page.getByLabel('잠재능력 등급 필터').selectOption('레전드리');
   await expect(page.locator('.item-row')).toHaveCount(5);
-  await page.getByRole('tab', { name: '캐릭터 능력치' }).click();
+  await page.getByRole('tab', { name: '능력치', exact: true }).click();
   await expect(page.locator('.full-stats')).toContainText('38420');
   await page.getByRole('tab', { name: '세트 효과' }).click();
   await expect(page.locator('.set-row')).toContainText('예시 세트 효과');
-  await page.getByRole('tab', { name: '장비 목록' }).click();
+  await page.getByRole('tab', { name: /^장비/ }).click();
   await page.getByLabel('잠재능력 등급 필터').selectOption('all');
-  await expect(page.getByLabel('분석 가능 장비')).toContainText('스타포스 8');
+  await expect(page.getByLabel('분석 가능 장비')).toContainText('스타포스 9');
   await page.getByRole('button', { name: '예산 내 추천' }).click();
   await expect(page.getByText('예산을 0보다 큰 억 메소 단위로 입력해 주세요.')).toBeVisible();
   await page.getByLabel('예산 (억 메소)').fill('100');
   await expect(page.getByText('강화 후보 정보는 준비됐지만 비용과 성능 모델 검증 전이라 순위를 제공하지 않습니다.')).toBeVisible();
-  await expect(page.getByText('잠재 등급 상승 참고')).toBeVisible();
+  await page.getByRole('tab', { name: '잠재능력', exact: true }).click();
+  await expect(page.getByText('등급 상승 참고')).toBeVisible();
   await expect(page.getByText('38,250,000 메소').first()).toBeVisible();
-  await expect(page.getByText('스타포스 다음 성 기대 비용')).toBeVisible();
+  await page.getByRole('tab', { name: '스타포스', exact: true }).click();
+  await expect(page.getByRole('heading', { name: '스타포스 강화' })).toBeVisible();
   await expect(page.getByText('16.85%', { exact: true }).first()).toBeVisible();
   await expect(page.getByText('3,151,795,078 메소', { exact: true }).first()).toBeVisible();
   await expect(page.getByText('강화 규칙 2/5 검증')).toBeVisible();
@@ -98,4 +100,27 @@ test('selected equipment can load official regular and additional potential opti
   await expect.poll(() => requests).toEqual(['regular', 'additional']);
   await page.getByLabel('공식 잠재 옵션표 닫기').click();
   if (info.project.name === 'mobile') await expect(page.getByLabel('장비 상세 닫기')).toBeVisible();
+});
+
+test('equipment analysis separates Maple upgrade views and preserves duplicate rings', async ({ page }, info) => {
+  await page.goto('/');
+  await expect(page.getByRole('tab', { name: /^장비/ })).toBeVisible();
+  await expect(page.getByRole('tab', { name: '업그레이드', exact: true })).toBeVisible();
+  await expect(page.getByRole('tab', { name: '스타포스', exact: true })).toBeVisible();
+  await expect(page.getByRole('tab', { name: '잠재능력', exact: true })).toBeVisible();
+  await expect(page.locator('.item-row .item-identity small').filter({ hasText: /^반지/ })).toHaveCount(2);
+  await expect(page.getByRole('button', { name: '메달 상세 보기' }).locator('.star-value')).toHaveCount(0);
+  await expect(page.getByLabel('캐릭터 요약')).toContainText('보스 데미지');
+  await expect(page.getByLabel('캐릭터 요약')).toContainText('320%');
+
+  await page.getByRole('tab', { name: '업그레이드', exact: true }).click();
+  await expect(page.getByRole('heading', { name: '장비 업그레이드' })).toBeVisible();
+  await page.screenshot({ path: `test-results/upgrade-${info.project.name}.png`, fullPage: true });
+  await page.getByRole('tab', { name: '스타포스', exact: true }).click();
+  await expect(page.getByRole('heading', { name: '스타포스 강화' })).toBeVisible();
+  await expect(page.getByText('메달', { exact: true })).toHaveCount(0);
+  await page.getByRole('tab', { name: '잠재능력', exact: true }).click();
+  await expect(page.getByRole('heading', { name: '잠재능력 강화' })).toBeVisible();
+  await page.screenshot({ path: `test-results/potential-${info.project.name}.png`, fullPage: true });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });

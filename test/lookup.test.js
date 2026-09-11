@@ -28,6 +28,22 @@ test('successful lookup preserves equipment details, caches and coalesces withou
   assert.equal((await request(app).get('/api/character?name=검증캐릭터')).body.cached, true);
   assert.equal(calls.length, 5);
 });
+
+test('equipment lookup preserves duplicate parts and Maple upgrade metadata', async () => {
+  const raw = responses();
+  raw.equipment.item_equipment = [
+    { ...raw.equipment.item_equipment[0], item_name: '첫 번째 반지', item_equipment_slot: '반지', item_equipment_part: '반지', scroll_upgrade: '8', scroll_upgradeable_count: '2', golden_hammer_flag: '적용' },
+    { ...raw.equipment.item_equipment[0], item_name: '두 번째 반지', item_equipment_slot: '반지', item_equipment_part: '반지', scroll_upgrade: '5', scroll_upgradeable_count: '0', golden_hammer_flag: '미적용' },
+  ];
+  const { app } = setup(raw);
+  const result = await request(app).get('/api/character?name=검증캐릭터');
+
+  assert.equal(result.status, 200);
+  assert.deepEqual(result.body.items.map((item) => item.item_name), ['첫 번째 반지', '두 번째 반지']);
+  assert.deepEqual(result.body.items.map((item) => item.scroll_upgrade), ['8', '5']);
+  assert.deepEqual(result.body.items.map((item) => item.scroll_upgradeable_count), ['2', '0']);
+  assert.deepEqual(result.body.items.map((item) => item.golden_hammer_flag), ['적용', '미적용']);
+});
 test('invalid names and missing configuration do not call upstream', async () => {
   const { app, calls } = setup(responses(), { apiKey: '' });
   assert.equal((await request(app).get('/api/character?name=abc!')).status, 400);

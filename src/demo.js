@@ -9,6 +9,7 @@ const definitions = [
   ['신발', '아케인셰이드 나이트슈즈', '17', '유니크', ['STR : +9%', 'STR : +6%', '이동속도 : +8'], '에픽'],
   ['귀고리', '에스텔라 이어링', '17', '유니크', ['STR : +9%', 'STR : +6%', 'DEX : +6%'], '에픽'],
   ['반지1', '가디언 엔젤 링', '18', '레전드리', ['STR : +12%', 'STR : +9%', '최대 HP : +9%'], '에픽'],
+  ['반지2', '마이스터링', '17', '유니크', ['STR : +9%', 'STR : +6%', '최대 HP : +6%'], '에픽'],
 ];
 
 export const demo = {
@@ -22,6 +23,7 @@ export const demo = {
     item_total_option: { str: String(90 + index * 7), attack_power: String(index === 0 ? 480 : 35), max_hp: '100', base_equipment_level: index === 0 || index === 6 || index === 7 ? 200 : 150 },
     item_base_option: { str: '30', attack_power: String(index === 0 ? 295 : 5) },
     item_add_option: { str: '40', all_stat: '5' }, item_starforce_option: { str: '20', attack_power: '25' },
+    item_etc_option: { str: '12', attack_power: '8' }, scroll_upgrade: index === 1 || index === 2 ? '0' : '8', scroll_upgradeable_count: index === 1 || index === 2 ? '0' : '2', golden_hammer_flag: index === 1 || index === 2 ? null : '적용',
   })),
   stats: [{ stat_name: 'STR', stat_value: '38420' }, { stat_name: '보스 몬스터 데미지', stat_value: '320' }, { stat_name: '방어율 무시', stat_value: '94.8' }, { stat_name: '크리티컬 데미지', stat_value: '86' }],
   sets: [{ set_name: '예시 세트 효과', total_set_count: 3, set_effect_info: [{ set_count: 3, set_option: '공격력 : +50' }] }],

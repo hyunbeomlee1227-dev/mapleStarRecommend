@@ -13,6 +13,8 @@ const options = z.record(z.string(), value).nullable().optional();
 const itemSchema = z.object({
   item_name: z.string(), item_equipment_slot: z.string(), item_equipment_part: value,
   item_icon: value, starforce: value, starforce_scroll_flag: value,
+  scroll_upgrade: value, scroll_upgradeable_count: value, golden_hammer_flag: value, cuttable_count: value,
+  soul_name: value, soul_option: value,
   potential_option_grade: value, additional_potential_option_grade: value,
   potential_option_1: value, potential_option_2: value, potential_option_3: value,
   additional_potential_option_1: value, additional_potential_option_2: value, additional_potential_option_3: value,

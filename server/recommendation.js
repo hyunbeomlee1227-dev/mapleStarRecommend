@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { supportsStarforce } from '../shared/equipment.js';
 
 const itemSchema = z.object({
   item_name: z.string().min(1).max(200),
@@ -24,20 +25,6 @@ export const recommendationRequestSchema = z.object({
     context.addIssue({ code: 'custom', path: ['budgetMesos'], message: '예산 내 추천에는 예산이 필요합니다.' });
   }
 });
-
-function readableStarforce(value) {
-  if (value === null || value === undefined || value === '') return false;
-  const number = typeof value === 'number' ? value : Number(value);
-  return Number.isInteger(number) && number >= 0 && number <= 30;
-}
-
-const nonStarforceSlots = new Set(['보조무기', '엠블렘', '훈장', '뱃지', '포켓 아이템', '칭호']);
-
-function supportsStarforce(item) {
-  if (!readableStarforce(item.starforce)) return false;
-  if (item.item_equipment_slot === '보조무기') return item.item_equipment_part === '방패';
-  return !nonStarforceSlots.has(item.item_equipment_slot);
-}
 
 const gradeIds = { '레어': 'rare', '에픽': 'epic', '유니크': 'unique', '레전드리': 'legendary' };
 
