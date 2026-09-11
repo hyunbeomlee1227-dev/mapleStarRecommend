@@ -65,9 +65,36 @@ test('curated equipment target recommends Estella 22 stars only below Extreme Lo
 
 test('equipment target catalog is validated and versioned', async () => {
   const catalog = await loadEquipmentTargets();
-  assert.equal(catalog.version, '2026-09-11-v3');
-  assert.equal(catalog.rules[0].id, 'estella-22-before-extreme-lotus');
+  assert.equal(catalog.version, '2026-09-11-v4');
+  assert.equal(catalog.rules[0].id, 'general-equipment-17-normal-lotus');
   assert.equal(catalog.rules.some((rule) => rule.id === 'astra-secondary-22-lategame'), true);
+});
+
+test('general job baseline applies by normalized slot and keeps only the strongest target', () => {
+  const targets = {
+    version: 'general-v1', updatedAt: '2026-09-11',
+    rules: [
+      { id: 'general-18', slots: ['반지', '장갑'], minEquipmentLevel: 130, minGoalOrder: 20, maxGoalOrder: 20, target: { starforce: 18 }, reason: '직업 공통 기준' },
+      { id: 'long-term-ring-22', itemNames: ['가디언 엔젤 링'], minGoalOrder: 20, maxGoalOrder: 20, target: { starforce: 22 }, reason: '장기 사용 장비군 기준' },
+    ],
+  };
+  const baselineItems = [
+    { item_name: '가디언 엔젤 링', item_equipment_slot: '반지2', baseEquipmentLevel: 160, starforce: '17' },
+    { item_name: '앱솔랩스 나이트글러브', item_equipment_slot: '장갑', baseEquipmentLevel: 160, starforce: '17' },
+    { item_name: '리스트레인트 링', item_equipment_slot: '반지1', baseEquipmentLevel: 110, starforce: '0', special_ring_level: 4 },
+  ];
+  const result = buildRecommendationPlan({ goal, mode: 'all', budgetMesos: null, combat, items: baselineItems, equipmentTargets: targets });
+
+  assert.deepEqual(result.equipmentRecommendations, [
+    {
+      ruleId: 'long-term-ring-22', sourceKind: 'curated-rule', itemName: '가디언 엔젤 링', slot: '반지2',
+      current: { starforce: 17 }, target: { starforce: 22 }, actions: ['스타포스 17성 -> 22성'], reason: '장기 사용 장비군 기준',
+    },
+    {
+      ruleId: 'general-18', sourceKind: 'curated-rule', itemName: '앱솔랩스 나이트글러브', slot: '장갑',
+      current: { starforce: 17 }, target: { starforce: 18 }, actions: ['스타포스 17성 -> 18성'], reason: '직업 공통 기준',
+    },
+  ]);
 });
 
 test('equipment family targets evaluate every matching equipped item', () => {

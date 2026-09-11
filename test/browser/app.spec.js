@@ -81,9 +81,10 @@ test('boss equipment goals are shown for the selected solo boss range', async ({
   await page.goto('/');
   await page.getByLabel('보스', { exact: true }).selectOption('스우');
   await expect(page.getByLabel('난이도', { exact: true })).toHaveValue('lotus-hard');
-  await expect(page.getByRole('heading', { name: '보스별 장비 목표' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '일반 직업군 장비 목표' })).toBeVisible();
   await expect(page.getByText('에스텔라 이어링', { exact: true }).last()).toBeVisible();
-  await expect(page.getByText('스타포스 17성 -> 22성', { exact: true })).toBeVisible();
+  await expect(page.getByText('스타포스 17성 -> 22성', { exact: true }).first()).toBeVisible();
+  await expect(page.locator('.equipment-recommendation-list article').filter({ hasText: '마이스터링' })).toContainText('스타포스 17성 -> 18성');
   await page.getByLabel('난이도', { exact: true }).selectOption('lotus-extreme');
   await expect(page.getByText('아케인셰이드 투핸드소드', { exact: true }).last()).toBeVisible();
   await expect(page.getByText('스타포스 18성 -> 22성', { exact: true }).first()).toBeVisible();

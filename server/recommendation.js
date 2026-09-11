@@ -106,32 +106,47 @@ function starforceRisks(items, rules) {
 
 function equipmentRecommendations(goal, items, equipmentTargets) {
   if (!Number.isInteger(goal?.order) || !equipmentTargets?.rules) return [];
-  return equipmentTargets.rules.flatMap((rule) => {
+  const candidates = equipmentTargets.rules.flatMap((rule) => {
     if (goal.order < rule.minGoalOrder || goal.order > rule.maxGoalOrder) return [];
-    const matchedItems = items.filter((candidate) => rule.itemNames?.includes(candidate.item_name)
-      || rule.itemNamePrefixes?.some((prefix) => candidate.item_name.startsWith(prefix)));
+    const matchedItems = items.filter((candidate) => {
+      const nameMatches = rule.itemNames?.includes(candidate.item_name)
+        || rule.itemNamePrefixes?.some((prefix) => candidate.item_name.startsWith(prefix));
+      const normalizedSlot = candidate.item_equipment_slot.replace(/\d+$/, '');
+      const slotMatches = rule.slots?.includes(normalizedSlot);
+      const levelMatches = (rule.minEquipmentLevel == null || candidate.baseEquipmentLevel >= rule.minEquipmentLevel)
+        && (rule.maxEquipmentLevel == null || candidate.baseEquipmentLevel <= rule.maxEquipmentLevel);
+      return (nameMatches || slotMatches) && levelMatches;
+    });
     return matchedItems.flatMap((item) => {
-    const rawStarforce = item.starforce;
-    const currentStarforce = typeof rawStarforce === 'number'
-      ? rawStarforce
-      : typeof rawStarforce === 'string' && /^\d{1,2}$/.test(rawStarforce) ? Number(rawStarforce) : null;
-    const actions = [];
-    if (rule.target.starforce != null && Number.isInteger(currentStarforce) && currentStarforce < rule.target.starforce) {
-      actions.push(`스타포스 ${currentStarforce}성 -> ${rule.target.starforce}성`);
-    }
-    if (!actions.length) return [];
-    return [{
-      ruleId: rule.id,
-      sourceKind: 'curated-rule',
-      itemName: item.item_name,
-      slot: item.item_equipment_slot,
-      current: { starforce: currentStarforce },
-      target: rule.target,
-      actions,
-      reason: rule.reason,
-    }];
+      if (rule.target.starforce != null && !supportsStarforce(item)) return [];
+      const rawStarforce = item.starforce;
+      const currentStarforce = typeof rawStarforce === 'number'
+        ? rawStarforce
+        : typeof rawStarforce === 'string' && /^\d{1,2}$/.test(rawStarforce) ? Number(rawStarforce) : null;
+      const actions = [];
+      if (rule.target.starforce != null && Number.isInteger(currentStarforce) && currentStarforce < rule.target.starforce) {
+        actions.push(`스타포스 ${currentStarforce}성 -> ${rule.target.starforce}성`);
+      }
+      if (!actions.length) return [];
+      return [{
+        ruleId: rule.id,
+        sourceKind: 'curated-rule',
+        itemName: item.item_name,
+        slot: item.item_equipment_slot,
+        current: { starforce: currentStarforce },
+        target: rule.target,
+        actions,
+        reason: rule.reason,
+      }];
     });
   });
+  const bestByItem = new Map();
+  for (const candidate of candidates) {
+    const key = `${candidate.slot}:${candidate.itemName}`;
+    const previous = bestByItem.get(key);
+    if (!previous || (candidate.target.starforce ?? -1) > (previous.target.starforce ?? -1)) bestByItem.set(key, candidate);
+  }
+  return [...bestByItem.values()];
 }
 
 export function buildRecommendationPlan({ goal, mode, budgetMesos, combat, items, rules, equipmentTargets }) {
