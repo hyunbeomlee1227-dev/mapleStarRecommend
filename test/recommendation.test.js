@@ -65,8 +65,27 @@ test('curated equipment target recommends Estella 22 stars only below Extreme Lo
 
 test('equipment target catalog is validated and versioned', async () => {
   const catalog = await loadEquipmentTargets();
-  assert.equal(catalog.version, '2026-09-11-v2');
+  assert.equal(catalog.version, '2026-09-11-v3');
   assert.equal(catalog.rules[0].id, 'estella-22-before-extreme-lotus');
+  assert.equal(catalog.rules.some((rule) => rule.id === 'astra-secondary-22-lategame'), true);
+});
+
+test('equipment family targets evaluate every matching equipped item', () => {
+  const familyTargets = {
+    version: 'family-v1', updatedAt: '2026-09-11',
+    rules: [{ id: 'eternal-family', itemNamePrefixes: ['에테르넬 '], minGoalOrder: 30, maxGoalOrder: 180, target: { starforce: 22 }, reason: '에테르넬 장비 목표' }],
+  };
+  const lateGoal = { id: 'kalos-chaos', boss: '감시자 칼로스', difficulty: '카오스', order: 80 };
+  const familyItems = [
+    { item_name: '에테르넬 나이트헬름', item_equipment_slot: '모자', starforce: '21' },
+    { item_name: '에테르넬 나이트아머', item_equipment_slot: '상의', starforce: '20' },
+    { item_name: '에테르넬 나이트팬츠', item_equipment_slot: '하의', starforce: '22' },
+  ];
+  const result = buildRecommendationPlan({ goal: lateGoal, mode: 'all', budgetMesos: null, combat, items: familyItems, equipmentTargets: familyTargets });
+  assert.deepEqual(result.equipmentRecommendations.map(({ itemName, actions }) => ({ itemName, actions })), [
+    { itemName: '에테르넬 나이트헬름', actions: ['스타포스 21성 -> 22성'] },
+    { itemName: '에테르넬 나이트아머', actions: ['스타포스 20성 -> 22성'] },
+  ]);
 });
 
 test('recommendation endpoint validates input and returns selected goal context', async () => {

@@ -33,6 +33,10 @@ test('equipment browsing, filters, detail and status remain usable', async ({ pa
   await expect(detail.locator('.tooltip-scroll-result')).toContainText('공격력 +8');
   await expect(detail.getByRole('heading', { name: '잠재능력', exact: true })).toBeVisible();
   await expect(detail.getByRole('heading', { name: '에디셔널 잠재능력', exact: true })).toBeVisible();
+  await expect(detail.locator('.potential-marker').nth(0)).toHaveText('U');
+  await expect(detail.locator('.potential-marker').nth(1)).toHaveText('E');
+  expect(await detail.locator('.potential-unique .potential-marker').evaluate((element) => getComputedStyle(element).backgroundColor)).toBe('rgb(255, 209, 43)');
+  expect(await detail.locator('.potential-epic .potential-marker').evaluate((element) => getComputedStyle(element).backgroundColor)).toBe('rgb(182, 124, 255)');
   expect(await detail.locator('.equipment-tooltip').evaluate((element) => getComputedStyle(element).backgroundColor)).toBe('rgb(36, 38, 45)');
   if (info.project.name === 'mobile') await page.getByLabel('장비 상세 닫기').click();
   else await expect(detail.locator('h3')).toHaveText('에스텔라 이어링 (+8)');

@@ -1,5 +1,5 @@
 {
-  "version": "2026-09-11-v2",
+  "version": "2026-09-11-v3",
   "updatedAt": "2026-09-11",
   "rules": [
     {
@@ -9,6 +9,30 @@
       "maxGoalOrder": 20,
       "target": { "starforce": 22 },
       "reason": "익스트림 스우 미만 솔로 보스 목표에서 사용하는 장비 목표입니다."
+    },
+    {
+      "id": "arcane-shade-22-midgame",
+      "itemNamePrefixes": ["아케인셰이드 "],
+      "minGoalOrder": 30,
+      "maxGoalOrder": 70,
+      "target": { "starforce": 22 },
+      "reason": "익스트림 스우부터 익스트림 세렌 구간에서 사용하는 아케인셰이드 장비의 22성 목표입니다."
+    },
+    {
+      "id": "eternal-22-lategame",
+      "itemNamePrefixes": ["에테르넬 "],
+      "minGoalOrder": 30,
+      "maxGoalOrder": 180,
+      "target": { "starforce": 22 },
+      "reason": "익스트림 스우 이상 솔로 보스 목표에서 장기 사용하는 에테르넬 장비의 22성 목표입니다."
+    },
+    {
+      "id": "astra-secondary-22-lategame",
+      "itemNamePrefixes": ["아스트라 "],
+      "minGoalOrder": 30,
+      "maxGoalOrder": 180,
+      "target": { "starforce": 22 },
+      "reason": "익스트림 스우 이상 솔로 보스 목표에서 사용하는 아스트라 보조무기의 22성 목표입니다."
     }
   ]
 }

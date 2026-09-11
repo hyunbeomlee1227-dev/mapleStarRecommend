@@ -108,8 +108,9 @@ function equipmentRecommendations(goal, items, equipmentTargets) {
   if (!Number.isInteger(goal?.order) || !equipmentTargets?.rules) return [];
   return equipmentTargets.rules.flatMap((rule) => {
     if (goal.order < rule.minGoalOrder || goal.order > rule.maxGoalOrder) return [];
-    const item = items.find((candidate) => rule.itemNames.includes(candidate.item_name));
-    if (!item) return [];
+    const matchedItems = items.filter((candidate) => rule.itemNames?.includes(candidate.item_name)
+      || rule.itemNamePrefixes?.some((prefix) => candidate.item_name.startsWith(prefix)));
+    return matchedItems.flatMap((item) => {
     const rawStarforce = item.starforce;
     const currentStarforce = typeof rawStarforce === 'number'
       ? rawStarforce
@@ -129,6 +130,7 @@ function equipmentRecommendations(goal, items, equipmentTargets) {
       actions,
       reason: rule.reason,
     }];
+    });
   });
 }
 

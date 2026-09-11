@@ -19,6 +19,12 @@ const optionSources = [
   ['starforce', 'item_starforce_option'],
   ['exceptional', 'item_exceptional_option'],
 ];
+const potentialGrades = {
+  '레전드리': { slug: 'legendary', marker: 'L' },
+  '유니크': { slug: 'unique', marker: 'U' },
+  '에픽': { slug: 'epic', marker: 'E' },
+  '레어': { slug: 'rare', marker: 'R' },
+};
 
 function numberValue(value) {
   if (value === null || value === undefined || value === '') return null;
@@ -67,7 +73,8 @@ function PotentialBlock({ item, additional = false }) {
   if (!grade) return null;
   const options = [1, 2, 3].map((index) => item[`${prefix}potential_option_${index}`]).filter(Boolean);
   const title = additional ? '에디셔널 잠재능력' : '잠재능력';
-  return <section className="tooltip-potential"><h4 aria-label={title}><span className="potential-marker" aria-hidden="true">L</span>{title} : <strong>{grade}</strong></h4><ul>{options.map((option, index) => <li key={index}>{String(option).replace(/\s*:\s*/, ' ')}</li>)}</ul></section>;
+  const meta = potentialGrades[grade] || { slug: 'unknown', marker: '?' };
+  return <section className={`tooltip-potential potential-${meta.slug}`}><h4 aria-label={title}><span className="potential-marker" aria-hidden="true">{meta.marker}</span>{title} : <strong>{grade}</strong></h4><ul>{options.map((option, index) => <li key={index}>{String(option).replace(/\s*:\s*/, ' ')}</li>)}</ul></section>;
 }
 
 function ScrollResult({ values }) {
