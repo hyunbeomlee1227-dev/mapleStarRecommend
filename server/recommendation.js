@@ -103,7 +103,35 @@ function starforceRisks(items, rules) {
   });
 }
 
-export function buildRecommendationPlan({ goal, mode, budgetMesos, combat, items, rules }) {
+function equipmentRecommendations(goal, items, equipmentTargets) {
+  if (!Number.isInteger(goal?.order) || !equipmentTargets?.rules) return [];
+  return equipmentTargets.rules.flatMap((rule) => {
+    if (goal.order < rule.minGoalOrder || goal.order > rule.maxGoalOrder) return [];
+    const item = items.find((candidate) => rule.itemNames.includes(candidate.item_name));
+    if (!item) return [];
+    const rawStarforce = item.starforce;
+    const currentStarforce = typeof rawStarforce === 'number'
+      ? rawStarforce
+      : typeof rawStarforce === 'string' && /^\d{1,2}$/.test(rawStarforce) ? Number(rawStarforce) : null;
+    const actions = [];
+    if (rule.target.starforce != null && Number.isInteger(currentStarforce) && currentStarforce < rule.target.starforce) {
+      actions.push(`스타포스 ${currentStarforce}성 -> ${rule.target.starforce}성`);
+    }
+    if (!actions.length) return [];
+    return [{
+      ruleId: rule.id,
+      sourceKind: 'administrator',
+      itemName: item.item_name,
+      slot: item.item_equipment_slot,
+      current: { starforce: currentStarforce },
+      target: rule.target,
+      actions,
+      reason: rule.reason,
+    }];
+  });
+}
+
+export function buildRecommendationPlan({ goal, mode, budgetMesos, combat, items, rules, equipmentTargets }) {
   const ruleTrace = { rulesVersion: rules?.version ?? null, rulesUpdatedAt: rules?.updatedAt ?? null };
   const coverage = {
     equipment: items.length,
@@ -125,6 +153,13 @@ export function buildRecommendationPlan({ goal, mode, budgetMesos, combat, items
     budgetMesos,
     coverage,
     blockers,
+    equipmentRecommendations: equipmentRecommendations(goal, items, equipmentTargets),
+    equipmentTargetTrace: {
+      version: equipmentTargets?.version ?? null,
+      updatedAt: equipmentTargets?.updatedAt ?? null,
+      sourceKind: 'administrator',
+      budgetApplied: false,
+    },
     supportedCalculations: {
       potentialTierUpgrades: potentialTierUpgrades(items, rules),
       starforceRisks: starforceRisks(items, rules),

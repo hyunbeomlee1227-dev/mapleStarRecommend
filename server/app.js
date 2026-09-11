@@ -4,7 +4,7 @@ import { assessGoal } from './combat.js';
 import { buildRecommendationPlan, recommendationRequestSchema } from './recommendation.js';
 import { PotentialOptionsError, potentialOptionsQuerySchema } from './potential-options.js';
 
-export function createApp({ service, potentialOptions = null, goals = { goals: [], defaultGoalId: null }, rules = { version: null, updatedAt: null, capabilities: {}, potentialResetCosts: { regular: [], additional: [] }, potentialTierUpgrades: { regular: {}, additional: {} }, starforceOutcomes: {}, starforceCostModel: null, summary: { verified: 0, partial: 0, unsupported: 0, total: 0 } }, perMinute = 12, potentialOptionsPerMinute = 30, now = Date.now }) {
+export function createApp({ service, potentialOptions = null, goals = { goals: [], defaultGoalId: null }, equipmentTargets = { version: null, updatedAt: null, rules: [] }, rules = { version: null, updatedAt: null, capabilities: {}, potentialResetCosts: { regular: [], additional: [] }, potentialTierUpgrades: { regular: {}, additional: {} }, starforceOutcomes: {}, starforceCostModel: null, summary: { verified: 0, partial: 0, unsupported: 0, total: 0 } }, perMinute = 12, potentialOptionsPerMinute = 30, now = Date.now }) {
   const app = express();
   app.disable('x-powered-by');
   const clients = new Map();
@@ -63,7 +63,7 @@ export function createApp({ service, potentialOptions = null, goals = { goals: [
     const parsed = recommendationRequestSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ code: 'INVALID_RECOMMENDATION_INPUT', message: parsed.error.issues[0]?.message || '추천 조건을 확인해 주세요.' });
     const goal = goals.goals.find((candidate) => candidate.id === parsed.data.goalId);
-    res.json(buildRecommendationPlan({ ...parsed.data, goal, rules }));
+    res.json(buildRecommendationPlan({ ...parsed.data, goal, rules, equipmentTargets }));
   });
   app.use('/api', (_req, res) => res.status(404).json({ code: 'NOT_FOUND', message: '지원하지 않는 요청입니다.' }));
   return app;

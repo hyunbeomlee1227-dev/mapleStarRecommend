@@ -18,8 +18,17 @@ test('equipment browsing, filters, detail and status remain usable', async ({ pa
   await page.getByLabel('장비 검색', { exact: true }).fill('에스텔라');
   await expect(page.locator('.item-row')).toHaveCount(1);
   await page.getByRole('button', { name: '에스텔라 이어링 상세 보기' }).click();
-  if (info.project.name === 'mobile') { await expect(page.locator('.mobile-detail')).toBeVisible(); await page.getByLabel('장비 상세 닫기').click(); }
-  else await expect(page.locator('.details-panel h3')).toHaveText('에스텔라 이어링');
+  const detail = info.project.name === 'mobile' ? page.locator('.mobile-detail') : page.locator('.details-panel');
+  await expect(detail).toBeVisible();
+  await expect(detail.getByRole('heading', { name: '장비 옵션' })).toBeVisible();
+  await expect(detail.getByRole('heading', { name: '기본 옵션' })).toBeVisible();
+  await expect(detail.getByRole('heading', { name: '추가옵션' })).toBeVisible();
+  await expect(detail.getByRole('heading', { name: '업그레이드 증가량' })).toBeVisible();
+  await expect(detail.getByRole('heading', { name: '스타포스 증가량' })).toBeVisible();
+  await expect(detail.getByRole('heading', { name: '잠재능력', exact: true })).toBeVisible();
+  await expect(detail.getByRole('heading', { name: '에디셔널 잠재능력', exact: true })).toBeVisible();
+  if (info.project.name === 'mobile') await page.getByLabel('장비 상세 닫기').click();
+  else await expect(detail.locator('h3')).toHaveText('에스텔라 이어링');
   await page.getByLabel('장비 검색', { exact: true }).fill('');
   await page.getByLabel('잠재능력 등급 필터').selectOption('레전드리');
   await expect(page.locator('.item-row')).toHaveCount(5);
@@ -50,6 +59,17 @@ test('equipment browsing, filters, detail and status remain usable', async ({ pa
   await page.screenshot({ path: `test-results/${info.project.name}.png`, fullPage: true });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   expect(errors).toEqual([]);
+});
+
+test('administrator equipment goals are shown for the selected solo boss range', async ({ page }) => {
+  await page.goto('/');
+  await page.getByLabel('보스', { exact: true }).selectOption('스우');
+  await expect(page.getByLabel('난이도', { exact: true })).toHaveValue('lotus-hard');
+  await expect(page.getByRole('heading', { name: '보스별 장비 목표' })).toBeVisible();
+  await expect(page.getByText('에스텔라 이어링', { exact: true }).last()).toBeVisible();
+  await expect(page.getByText('스타포스 17성 -> 22성', { exact: true })).toBeVisible();
+  await page.getByLabel('난이도', { exact: true }).selectOption('lotus-extreme');
+  await expect(page.getByText('이 보스 구간에 등록된 관리자 장비 목표가 없습니다.')).toBeVisible();
 });
 
 test('real lookup UI uses server response and recent searches can be deleted', async ({ page }) => {

@@ -1,0 +1,14 @@
+{
+  "version": "2026-09-11-v1",
+  "updatedAt": "2026-09-11",
+  "rules": [
+    {
+      "id": "estella-22-before-extreme-lotus",
+      "itemNames": ["에스텔라 이어링"],
+      "minGoalOrder": 0,
+      "maxGoalOrder": 20,
+      "target": { "starforce": 22 },
+      "reason": "익스트림 스우 미만 솔로 보스 목표에서 사용하는 관리자 기준 장비 목표입니다."
+    }
+  ]
+}
