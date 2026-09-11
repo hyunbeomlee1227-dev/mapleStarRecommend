@@ -7,6 +7,7 @@ const itemSchema = z.object({
   item_equipment_part: z.string().min(1).max(100).nullable().optional(),
   baseEquipmentLevel: z.number().int().min(1).max(300).nullable().optional(),
   starforce: z.union([z.string().max(10), z.number().finite()]).nullable().optional(),
+  special_ring_level: z.union([z.string().max(10), z.number().finite()]).nullable().optional(),
   potential_option_grade: z.string().max(30).nullable().optional(),
   additional_potential_option_grade: z.string().max(30).nullable().optional(),
 });

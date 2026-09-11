@@ -28,9 +28,7 @@ test('equipment browsing, filters, detail and status remain usable', async ({ pa
   await expect(detail.locator('[data-stat="str"]')).toContainText('(30+40+12+20)');
   await expect(detail.getByText('주문서 강화 8회', { exact: false })).toBeVisible();
   await expect(detail.getByText('가위 사용 가능 횟수 : 5회', { exact: true })).toBeVisible();
-  await expect(detail.getByText('강화 방식', { exact: true })).toBeVisible();
-  await expect(detail.getByText('일반 주문서 강화', { exact: true })).toBeVisible();
-  await expect(detail.getByText('세부 주문서명 식별 불가', { exact: true })).toBeVisible();
+  await expect(detail.getByText('강화 방식', { exact: true })).toHaveCount(0);
   await expect(detail.locator('.tooltip-scroll-result')).toContainText('STR +12');
   await expect(detail.locator('.tooltip-scroll-result')).toContainText('공격력 +8');
   await expect(detail.getByRole('heading', { name: '잠재능력', exact: true })).toBeVisible();
@@ -155,4 +153,18 @@ test('equipment analysis separates Maple upgrade views and preserves duplicate r
   await expect(page.getByRole('heading', { name: '잠재능력 강화' })).toBeVisible();
   await page.screenshot({ path: `test-results/potential-${info.project.name}.png`, fullPage: true });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test('Astra secondary weapons show stars while special rings do not', async ({ page }) => {
+  await page.route('**/api/character?*', async (route) => {
+    const { demo } = await import('../../src/demo.js');
+    const astra = { ...demo.items[0], item_name: '아스트라 여의보주', item_equipment_slot: '보조무기', item_equipment_part: '보조무기', starforce: '18' };
+    const restraint = { ...demo.items[9], item_name: '리스트레인트 링', item_equipment_slot: '반지4', item_equipment_part: '반지', starforce: '0', special_ring_level: 4 };
+    await route.fulfill({ json: { ...demo, source: 'nexon', character: { ...demo.character, name: '특수장비검증' }, items: [astra, restraint] } });
+  });
+  await page.goto('/');
+  await page.getByLabel('캐릭터 이름', { exact: true }).fill('특수장비검증');
+  await page.getByRole('button', { name: '캐릭터 조회', exact: true }).click();
+  await expect(page.getByRole('button', { name: '아스트라 여의보주 상세 보기' }).locator('.star-value')).toContainText('18');
+  await expect(page.getByRole('button', { name: '리스트레인트 링 상세 보기' }).locator('.not-applicable')).toHaveText('-');
 });

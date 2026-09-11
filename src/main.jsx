@@ -81,12 +81,13 @@ function App() {
     }
     const controller = new AbortController();
     setRecommendation({ status: 'loading', message: '강화 후보를 확인하는 중입니다.' });
-    const items = data.items.map(({ item_name, item_equipment_slot, item_equipment_part, item_total_option, item_base_option, starforce, potential_option_grade, additional_potential_option_grade }) => ({
+    const items = data.items.map(({ item_name, item_equipment_slot, item_equipment_part, item_total_option, item_base_option, starforce, special_ring_level, potential_option_grade, additional_potential_option_grade }) => ({
       item_name,
       item_equipment_slot,
       item_equipment_part,
       baseEquipmentLevel: Number(item_total_option?.base_equipment_level ?? item_base_option?.base_equipment_level) || null,
       starforce,
+      special_ring_level,
       potential_option_grade,
       additional_potential_option_grade,
     }));
