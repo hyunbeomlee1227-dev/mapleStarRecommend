@@ -9,7 +9,7 @@ import { createPotentialOptionsService } from './potential-options.js';
 import { loadEquipmentTargets } from './equipment-targets.js';
 import { loadEquipmentBaselines } from './equipment-baselines.js';
 
-const production = process.argv.includes('--production');
+const production = process.argv.includes('--production') || process.env.NODE_ENV === 'production';
 function integer(name, fallback, minimum = 1) {
   const number = Number(process.env[name] ?? fallback);
   if (!Number.isSafeInteger(number) || number < minimum) throw new Error(`Invalid configuration: ${name}`);
@@ -26,7 +26,8 @@ const rules = await loadUpgradeRules();
 const equipmentTargets = await loadEquipmentTargets();
 const equipmentBaselines = await loadEquipmentBaselines();
 const potentialOptions = createPotentialOptionsService();
-const app = createApp({ service, potentialOptions, goals, rules, equipmentTargets, equipmentBaselines, perMinute: integer('LOOKUP_LIMIT_PER_MINUTE', 12), potentialOptionsPerMinute: integer('POTENTIAL_OPTIONS_LIMIT_PER_MINUTE', 30) });
+const trustProxyHops = integer('TRUST_PROXY_HOPS', 0, 0);
+const app = createApp({ service, potentialOptions, goals, rules, equipmentTargets, equipmentBaselines, perMinute: integer('LOOKUP_LIMIT_PER_MINUTE', 12), potentialOptionsPerMinute: integer('POTENTIAL_OPTIONS_LIMIT_PER_MINUTE', 30), trustProxy: trustProxyHops || false });
 const server = createServer(app);
 let vite;
 if (production) {
@@ -37,13 +38,13 @@ if (production) {
   vite = await createViteServer({ server: { middlewareMode: true, hmr: { server }, fs: { deny: ['.env', '.env.*', '**/.git/**', '**/.runtime/**', '**/.agents/**', '**/.scratch/**', '**/server/**', '**/test/**'] } } });
   app.use(vite.middlewares);
 }
-const host = process.env.HOST || '127.0.0.1';
+const host = process.env.HOST || (production ? '0.0.0.0' : '127.0.0.1');
 let port = integer('PORT', 5173);
 server.on('error', (error) => {
-  if (error.code === 'EADDRINUSE' && port < 5193) { port++; server.listen(port, host); }
+  if (!production && error.code === 'EADDRINUSE' && port < 5193) { port++; server.listen(port, host); }
   else { console.error('Server could not start:', error.code); process.exit(1); }
 });
-server.listen(port, host, () => console.log(`Local: http://${host}:${port}`));
+server.listen(port, host, () => console.log(`Server listening on http://${host}:${port}`));
 async function close() { await vite?.close(); server.close(() => process.exit(0)); }
 process.on('SIGTERM', close);
 process.on('SIGINT', close);

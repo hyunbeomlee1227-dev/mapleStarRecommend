@@ -80,6 +80,13 @@ test('invalid names and missing configuration do not call upstream', async () =>
   assert.equal((await request(app).get('/api/status')).body.configured, false);
   assert.equal(calls.length, 0);
 });
+test('health check is cache-safe and does not expose server details', async () => {
+  const result = await request(setup().app).get('/healthz');
+  assert.equal(result.status, 200);
+  assert.deepEqual(result.body, { status: 'ok' });
+  assert.equal(result.headers['cache-control'], 'no-store');
+  assert.equal(result.headers['x-powered-by'], undefined);
+});
 test('an unequipped character remains valid while mixed dates fail', async () => {
   const raw = responses(); raw.equipment.item_equipment = null;
   const empty = await request(setup(raw).app).get('/api/character?name=검증');
@@ -101,6 +108,16 @@ test('request limit cannot be bypassed by spoofed forwarded headers', async () =
   await request(app).get('/api/character?name=검증').set('X-Forwarded-For', '1.2.3.4');
   const result = await request(app).get('/api/character?name=검증').set('X-Forwarded-For', '5.6.7.8');
   assert.equal(result.status, 429); assert.equal(result.headers['retry-after'], '60');
+});
+test('trusted proxy mode applies rate limits to the forwarded client IP', async () => {
+  const { service } = setup();
+  const app = createApp({ service, perMinute: 1, trustProxy: 1 });
+  const first = await request(app).get('/api/character?name=검증').set('X-Forwarded-For', '1.2.3.4');
+  const second = await request(app).get('/api/character?name=검증').set('X-Forwarded-For', '5.6.7.8');
+  const limited = await request(app).get('/api/character?name=검증').set('X-Forwarded-For', '1.2.3.4');
+  assert.equal(first.status, 200);
+  assert.equal(second.status, 200);
+  assert.equal(limited.status, 429);
 });
 test('invalid request limit configuration is rejected before calling upstream', () => {
   assert.throws(() => createNexonService({ apiKey: 'key', intervalMs: Number.NaN }), { code: 'SERVICE_CONFIGURATION' });

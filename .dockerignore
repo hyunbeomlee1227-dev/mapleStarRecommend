@@ -1,0 +1,14 @@
+.git
+.agents
+.scratch
+.runtime
+.env
+.env.*
+!.env.example
+node_modules
+dist
+test
+test-results
+playwright-report
+Dockerfile
+npm-debug.log*
