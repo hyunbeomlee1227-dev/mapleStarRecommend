@@ -94,12 +94,20 @@ test('boss equipment goals are shown for the selected solo boss range', async ({
 test('real lookup UI uses server response and recent searches can be deleted', async ({ page }) => {
   await page.route('**/api/character?*', async (route) => {
     const { demo } = await import('../../src/demo.js');
-    await route.fulfill({ json: { ...demo, source: 'nexon', date: '2026-09-08', character: { ...demo.character, name: '검증캐릭터', image: null } } });
+    await route.fulfill({ json: {
+      ...demo,
+      source: 'nexon',
+      date: '2026-09-08',
+      preset: 2,
+      presetSelection: { status: 'selected', strategy: 'boss-combat-options-v1', excludedPresets: [{ preset: 1, reasons: ['아이템 획득'] }], selectedFarmingReasons: [] },
+      character: { ...demo.character, name: '검증캐릭터', image: null },
+    } });
   });
   await page.goto('/');
   await page.getByLabel('캐릭터 이름', { exact: true }).fill('검증캐릭터');
   await page.getByRole('button', { name: '캐릭터 조회', exact: true }).click();
   await expect(page.locator('.character-identity h2')).toHaveText('검증캐릭터');
+  await expect(page.locator('.snapshot')).toContainText('프리셋 2 · 보스 옵션 자동 선택');
   await expect(page.locator('.demo-banner')).toHaveCount(0);
   await page.getByLabel('최근 조회 모두 삭제').click();
   await expect(page.locator('.recent')).toHaveCount(0);

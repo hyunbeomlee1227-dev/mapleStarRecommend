@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { buildCombatSnapshot } from './combat.js';
 import { withFileLock } from './file-lock.js';
 import { writeFileAtomically } from './file-write.js';
+import { selectBossEquipmentPreset } from './equipment-preset.js';
 
 export class LookupError extends Error {
   constructor(code, message, status = 502, options) { super(message, options); this.code = code; this.status = status; }
@@ -25,7 +26,15 @@ const itemSchema = z.object({
   item_starforce_option: options, item_etc_option: options, item_exceptional_option: options,
 });
 const basicSchema = z.object({ date: z.string(), character_name: z.string(), character_class: z.string(), character_level: z.number(), world_name: z.string(), character_image: value });
-const equipmentSchema = z.object({ date: z.string(), preset_no: z.number().nullable().optional(), item_equipment: z.array(itemSchema).nullable().transform((items) => items ?? []) });
+const itemList = z.array(itemSchema).nullable().optional().transform((items) => items ?? []);
+const equipmentSchema = z.object({
+  date: z.string(),
+  preset_no: z.number().nullable().optional(),
+  item_equipment: itemList,
+  item_equipment_preset_1: itemList,
+  item_equipment_preset_2: itemList,
+  item_equipment_preset_3: itemList,
+});
 const statSchema = z.object({ date: z.string(), final_stat: z.array(z.object({ stat_name: z.string(), stat_value: z.string() })).nullable().transform((stats) => stats ?? []) });
 const setSchema = z.object({ date: z.string(), set_effect: z.array(z.object({ set_name: z.string(), total_set_count: z.number(), set_effect_info: z.array(z.object({ set_count: z.number(), set_option: z.string() })).nullable().transform((effects) => effects ?? []), set_option_full: z.array(z.object({ set_count: z.number(), set_option: z.string() })).nullable().optional() })).nullable().transform((sets) => sets ?? []) });
 
@@ -48,10 +57,16 @@ export function normalizeSnapshot(raw, requestedDate, fetchedAt) {
   if (parsed.some((result) => !result.success)) throw new LookupError('INCOMPLETE_DATA', '장비 정보가 아직 완전하지 않습니다. 잠시 후 다시 조회해 주세요.');
   const [basic, equipment, stat, set] = parsed.map((result) => result.data);
   if (parsed.some((result) => result.data.date.slice(0, 10) !== requestedDate)) throw new LookupError('INCONSISTENT_DATA', '조회 기준일이 서로 다릅니다. 잠시 후 다시 조회해 주세요.');
+  const selectedEquipment = selectBossEquipmentPreset({
+    activePreset: equipment.preset_no ?? null,
+    currentItems: equipment.item_equipment,
+    presets: [1, 2, 3].map((preset) => ({ preset, items: equipment[`item_equipment_preset_${preset}`] })),
+  });
   return {
-    source: 'nexon', date: requestedDate, fetchedAt, preset: equipment.preset_no ?? null,
+    source: 'nexon', date: requestedDate, fetchedAt, preset: selectedEquipment.preset,
+    presetSelection: selectedEquipment.selection,
     character: { name: basic.character_name, job: basic.character_class, level: basic.character_level, world: basic.world_name, image: safeImage(basic.character_image) },
-    items: equipment.item_equipment.map((item) => ({ ...item, item_icon: safeImage(item.item_icon), item_shape_icon: safeImage(item.item_shape_icon) })),
+    items: selectedEquipment.items.map((item) => ({ ...item, item_icon: safeImage(item.item_icon), item_shape_icon: safeImage(item.item_shape_icon) })),
     stats: stat.final_stat, sets: set.set_effect,
     combat: buildCombatSnapshot(stat.final_stat),
     analysis: { status: 'unverified', message: '직업별 계산과 보스 목표 기준 검증 전입니다.' },

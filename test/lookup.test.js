@@ -51,6 +51,28 @@ test('equipment lookup preserves duplicate parts and Maple upgrade metadata', as
   assert.deepEqual(result.body.items.map((item) => item.scroll_upgradeable_count), ['2', '0']);
   assert.deepEqual(result.body.items.map((item) => item.golden_hammer_flag), ['적용', '미적용']);
 });
+test('equipment lookup uses the strongest non-farming preset', async () => {
+  const raw = responses();
+  raw.equipment.preset_no = 1;
+  raw.equipment.item_equipment_preset_1 = [{
+    ...raw.equipment.item_equipment[0], item_name: '사냥 장갑',
+    potential_option_1: '아이템 드롭률 : +20%',
+  }];
+  raw.equipment.item_equipment_preset_2 = [{
+    ...raw.equipment.item_equipment[0], item_name: '보스 장갑',
+    potential_option_1: '보스 몬스터 공격 시 데미지 : +40%',
+  }];
+  raw.equipment.item_equipment_preset_3 = null;
+  const { app } = setup(raw);
+
+  const result = await request(app).get('/api/character?name=검증캐릭터');
+
+  assert.equal(result.status, 200);
+  assert.equal(result.body.preset, 2);
+  assert.deepEqual(result.body.items.map(({ item_name }) => item_name), ['보스 장갑']);
+  assert.equal(result.body.presetSelection.status, 'selected');
+  assert.deepEqual(result.body.presetSelection.excludedPresets, [{ preset: 1, reasons: ['아이템 획득'] }]);
+});
 test('invalid names and missing configuration do not call upstream', async () => {
   const { app, calls } = setup(responses(), { apiKey: '' });
   assert.equal((await request(app).get('/api/character?name=abc!')).status, 400);
