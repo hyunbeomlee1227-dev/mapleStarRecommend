@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+
+  production-container:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Build production image
+        run: docker build --tag maple-star-recommend:ci .
+      - name: Start production container
+        run: >-
+          docker run --detach --name maple-star-recommend-ci --publish 5173:5173
+          --env NEXON_API_KEY="$SMOKE_TEST_SECRET"
+          --env TRUST_PROXY_HOPS=0
+          maple-star-recommend:ci
+        env:
+          SMOKE_TEST_SECRET: ci-only-secret-marker
+      - name: Smoke test production HTTP interface
+        run: npm run test:production-smoke
+        env:
+          BASE_URL: http://127.0.0.1:5173
+          SMOKE_TEST_SECRET: ci-only-secret-marker
+      - name: Show container logs after failure
+        if: failure()
+        run: docker logs maple-star-recommend-ci
+      - name: Remove test container
+        if: always()
+        run: docker rm --force maple-star-recommend-ci || true

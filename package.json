@@ -12,7 +12,8 @@
     "build": "vite build",
     "refresh:equipment-baselines": "node --env-file-if-exists=.env scripts/refresh-equipment-baselines.js",
     "test": "node --test test/*.test.js",
-    "test:browser": "playwright test"
+    "test:browser": "playwright test",
+    "test:production-smoke": "node scripts/production-smoke-test.js"
   },
   "dependencies": {
     "cheerio": "^1.2.0",
