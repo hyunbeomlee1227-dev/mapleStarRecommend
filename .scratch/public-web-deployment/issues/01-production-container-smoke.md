@@ -1,8 +1,8 @@
 # 운영 컨테이너 스모크 테스트 자동화
 
-Status: ready-for-agent
+Status: ready-for-human
 Type: task
-Progress: implementation-complete; review-findings-fixed; github-ci-run-pending
+Progress: implementation-complete; review-findings-fixed; github-ci-passed
 Depends on: none
 
 ## 완료 기준
@@ -23,3 +23,4 @@ Depends on: none
 - 2026-09-13: `/implement` 호출을 앞선 티켓 구성을 승인한 것으로 보고 첫 번째 차단 없는 티켓을 시작했다.
 - 2026-09-13: 운영 HTTP 스모크 검사기와 GitHub Actions 컨테이너 작업을 구현했다. 로컬 운영 프로세스 검사는 통과했으며 Docker 엔진이 꺼져 있어 실제 이미지 실행은 첫 GitHub Actions 실행에서 확인한다.
 - 2026-09-13: 코드 리뷰에 따라 모든 브랜치 푸시에서 CI를 실행하고, 동일 출처 정적 자산 의존성을 재귀 검사하며, HTTP 경계 밖의 컨테이너 내부 검사를 제거했다.
+- 2026-09-13: GitHub Actions 실행 34712143995에서 단위 테스트·빌드와 실제 Linux 운영 컨테이너 스모크 작업이 모두 성공했다.
