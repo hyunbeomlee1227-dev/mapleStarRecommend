@@ -72,7 +72,7 @@ test('equipment browsing, filters, detail and status remain usable', async ({ pa
   await expect(gloveStarforce).toContainText('4,005,000,000 메소');
   await expect(page.getByText('강화 규칙 2/5 검증')).toBeVisible();
   await page.getByText('강화 규칙 2/5 검증').click();
-  await expect(page.getByText('2026-09-12-v6 · 2026-09-12')).toBeVisible();
+  await expect(page.getByText('2026-09-12-v7 · 2026-09-12')).toBeVisible();
   await expect(page.getByText('잠재 재설정 비용', { exact: true })).toBeVisible();
   await expect(page.getByText('스타포스 기대 비용', { exact: true })).toBeVisible();
   await expect(page.getByText('순위 계산 대기', { exact: true })).toBeVisible();
@@ -128,6 +128,11 @@ test('lookup failures preserve current displayed data and show an error', async 
 
 test('selected equipment can load official regular and additional potential option tables', async ({ page }, info) => {
   const requests = [];
+  let targetRequestCount = 0;
+  let releaseDelayedTarget;
+  let finishDelayedTarget;
+  const delayedTarget = new Promise((resolve) => { releaseDelayedTarget = resolve; });
+  const delayedTargetFinished = new Promise((resolve) => { finishDelayedTarget = resolve; });
   await page.route('**/api/rules/potential-options?*', async (route) => {
     requests.push(new URL(route.request().url()).searchParams.get('type'));
     await route.fulfill({ json: {
@@ -139,16 +144,43 @@ test('selected equipment can load official regular and additional potential opti
       ],
     } });
   });
+  await page.route('**/api/rules/potential-target-probability', async (route) => {
+    targetRequestCount++;
+    const body = route.request().postDataJSON();
+    expect(body.targetOptions).toEqual(['보스 몬스터 공격 시 데미지 +40%']);
+    expect(body.minimumMatches).toBe(1);
+    if (targetRequestCount === 2) await delayedTarget;
+    try {
+      await route.fulfill({ json: {
+        probability: 0.1, expectedResets: 10, resetCost: 45_000_000, expectedMeso: 450_000_000,
+        currentResultProbability: 0.0001, conditionedOnDifferentResult: true, alreadySatisfied: false,
+      } });
+    } finally {
+      if (targetRequestCount === 2) finishDelayedTarget();
+    }
+  });
   await page.goto('/');
   if (info.project.name === 'mobile') await page.getByRole('button', { name: '아케인셰이드 투핸드소드 상세 보기' }).click();
   await page.getByRole('button', { name: '공식 잠재 옵션표 보기' }).click();
   await expect(page.getByRole('dialog', { name: '공식 잠재 옵션표' })).toBeVisible();
   await expect(page.locator('dialog:open')).toHaveCount(1);
-  await expect(page.getByRole('dialog', { name: '공식 잠재 옵션표' }).getByText('보스 몬스터 공격 시 데미지 +40%')).toBeVisible();
+  await expect(page.locator('.potential-lines').getByText('보스 몬스터 공격 시 데미지 +40%')).toBeVisible();
+  await page.getByRole('checkbox', { name: '보스 몬스터 공격 시 데미지 +40%' }).check();
+  await page.getByRole('button', { name: '목표 확률 계산' }).click();
+  const targetResult = page.getByLabel('잠재 목표 계산 결과');
+  await expect(targetResult).toContainText('10%');
+  await expect(targetResult).toContainText('10.00회');
+  await expect(targetResult).toContainText('450,000,000 메소');
   await page.screenshot({ path: `test-results/potential-options-${info.project.name}.png`, fullPage: true });
   expect(await page.getByRole('dialog', { name: '공식 잠재 옵션표' }).evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+  await page.getByRole('button', { name: '목표 확률 계산' }).click();
+  await expect.poll(() => targetRequestCount).toBe(2);
   await page.getByRole('button', { name: '에디셔널' }).click();
+  releaseDelayedTarget();
+  await delayedTargetFinished;
   await expect.poll(() => requests).toEqual(['regular', 'additional']);
+  await expect(page.getByText('목표 조합 확률은 레전드리 등급만 지원합니다.')).toBeVisible();
+  await expect(targetResult).toHaveCount(0);
   await page.getByLabel('공식 잠재 옵션표 닫기').click();
   if (info.project.name === 'mobile') await expect(page.getByLabel('장비 상세 닫기')).toBeVisible();
 });

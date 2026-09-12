@@ -9,7 +9,7 @@ import { createApp } from '../server/app.js';
 
 test('upgrade rule catalog exposes verified costs and blocks incomplete calculations', async () => {
   const rules = await loadUpgradeRules();
-  assert.equal(rules.version, '2026-09-12-v6');
+  assert.equal(rules.version, '2026-09-12-v7');
   assert.equal(rules.capabilities.potentialResetCost.status, 'verified');
   assert.equal(rules.capabilities.potentialTierUpgrade.status, 'verified');
   assert.equal(rules.capabilities.potentialTierUpgrade.usableForRecommendation, true);

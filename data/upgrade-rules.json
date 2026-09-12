@@ -1,5 +1,5 @@
 {
-  "version": "2026-09-12-v6",
+  "version": "2026-09-12-v7",
   "updatedAt": "2026-09-12",
   "capabilities": {
     "potentialResetCost": {
@@ -20,7 +20,7 @@
       "label": "잠재 목표 옵션 확률",
       "status": "partial",
       "usableForRecommendation": false,
-      "message": "부위·레벨·등급별 공식 줄 옵션과 표기 확률 조회를 지원합니다. 중복 제한을 반영한 목표 조합 확률은 검증이 필요합니다.",
+      "message": "레전드리 장비는 공식 줄 확률, 최대 등장 횟수와 동일 결과 재추첨을 반영한 목표 조합 확률을 제공합니다. 낮은 등급의 등급 상승 결합은 아직 지원하지 않습니다.",
       "sources": ["https://maplestory.nexon.com/Guide/OtherProbability/cube/black", "https://maplestory.nexon.com/Guide/OtherProbability/cube/addi"]
     },
     "starforceExpectedCost": {

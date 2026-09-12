@@ -1,5 +1,6 @@
 import * as cheerio from 'cheerio';
 import { z } from 'zod';
+import { calculatePotentialTargetProbability, normalizePotentialOption } from './potential-target.js';
 
 const ENDPOINT = 'https://maplestory.nexon.com/Guide/OtherProbability/cube/GetSearchProbList';
 const cubeIds = { regular: '5062010', additional: '5062500' };
@@ -28,6 +29,13 @@ export const potentialOptionsQuerySchema = z.object({
 export const potentialLineGradesSchema = potentialOptionsQuerySchema.extend({
   options: z.array(z.string().min(1).max(500)).min(1).max(3),
 });
+export const potentialTargetProbabilitySchema = potentialOptionsQuerySchema.extend({
+  grade: z.literal('legendary'),
+  targetOptions: z.array(z.string().min(1).max(500)).min(1).max(30)
+    .refine((options) => new Set(options.map(normalizePotentialOption)).size === options.length, '목표 옵션은 중복해서 선택할 수 없습니다.'),
+  minimumMatches: z.number().int().min(1).max(3),
+  currentOptions: z.array(z.string().min(1).max(500)).length(3).optional(),
+});
 
 export class PotentialOptionsError extends Error {
   constructor(code, message, status = 502) {
@@ -35,10 +43,6 @@ export class PotentialOptionsError extends Error {
     this.code = code;
     this.status = status;
   }
-}
-
-function normalizedOption(option) {
-  return String(option ?? '').replace(/\s*:\s*/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
 export function parsePotentialOptionsHtml(html) {
@@ -117,9 +121,26 @@ export function createPotentialOptionsService({ fetchImpl = fetch, now = Date.no
     if (!lowerGrades[input.grade]) return input.options.map(() => input.grade);
     const lowerGrade = lowerGrades[input.grade];
     const lower = await lookup({ type: input.type, grade: lowerGrade, part: input.part, level: input.level });
-    const lowerOptions = new Set((lower.lines[0] ?? []).map(({ option }) => normalizedOption(option)));
-    return input.options.map((option) => lowerOptions.has(normalizedOption(option)) ? lowerGrade : input.grade);
+    const lowerOptions = new Set((lower.lines[0] ?? []).map(({ option }) => normalizePotentialOption(option)));
+    return input.options.map((option) => lowerOptions.has(normalizePotentialOption(option)) ? lowerGrade : input.grade);
   }
 
-  return { lookup, classifyLines };
+  async function calculateTarget(input) {
+    const table = await lookup(input);
+    let calculation;
+    try {
+      calculation = calculatePotentialTargetProbability({
+        lines: table.lines,
+        targetOptions: input.targetOptions,
+        minimumMatches: input.minimumMatches,
+        currentOptions: input.currentOptions,
+      });
+    } catch (error) {
+      throw new PotentialOptionsError('INVALID_CURRENT_POTENTIAL', error.message, 422);
+    }
+    const { lines: _lines, cached: _cached, ...metadata } = table;
+    return { ...metadata, targetOptions: input.targetOptions, minimumMatches: input.minimumMatches, ...calculation };
+  }
+
+  return { lookup, classifyLines, calculateTarget };
 }

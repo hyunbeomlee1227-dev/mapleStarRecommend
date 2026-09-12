@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ArrowUpRight, LoaderCircle, X } from 'lucide-react';
+import { ArrowUpRight, LoaderCircle, Target, X } from 'lucide-react';
 
 const gradeSlugs = { 레어: 'rare', 에픽: 'epic', 유니크: 'unique', 레전드리: 'legendary' };
 const partSlugs = {
@@ -19,10 +19,23 @@ export function canLookupPotentialOptions(item) {
   return Boolean(potentialQueryFor(item, 'regular') || potentialQueryFor(item, 'additional'));
 }
 
+function currentPotentialOptions(item, type) {
+  const prefix = type === 'regular' ? 'potential_option_' : 'additional_potential_option_';
+  const options = [1, 2, 3].map((line) => item?.[`${prefix}${line}`]).filter(Boolean);
+  return options.length === 3 ? options : null;
+}
+
+const mesos = new Intl.NumberFormat('ko-KR');
+const percent = (value) => `${(value * 100).toFixed(8).replace(/0+$/, '').replace(/\.$/, '')}%`;
+
 export default function PotentialOptionsDialog({ item, open, onClose }) {
   const dialogRef = useRef(null);
+  const calculationControllerRef = useRef(null);
   const [type, setType] = useState('regular');
   const [result, setResult] = useState({ status: 'idle' });
+  const [targetOptions, setTargetOptions] = useState([]);
+  const [minimumMatches, setMinimumMatches] = useState(1);
+  const [calculation, setCalculation] = useState({ status: 'idle' });
   const regularAvailable = Boolean(potentialQueryFor(item, 'regular'));
   const additionalAvailable = Boolean(potentialQueryFor(item, 'additional'));
 
@@ -41,6 +54,10 @@ export default function PotentialOptionsDialog({ item, open, onClose }) {
     }
     const controller = new AbortController();
     setResult({ status: 'loading' });
+    calculationControllerRef.current?.abort();
+    setTargetOptions([]);
+    setMinimumMatches(1);
+    setCalculation({ status: 'idle' });
     fetch(`/api/rules/potential-options?${new URLSearchParams(query)}`, { signal: controller.signal })
       .then(async (response) => { const body = await response.json(); if (!response.ok) throw new Error(body.message); return body; })
       .then((body) => setResult({ status: 'ready', body }))
@@ -49,15 +66,48 @@ export default function PotentialOptionsDialog({ item, open, onClose }) {
   }, [open, item, type]);
 
   function close() {
+    calculationControllerRef.current?.abort();
     dialogRef.current?.close();
   }
+
+  function toggleTarget(option) {
+    setTargetOptions((selected) => selected.includes(option) ? selected.filter((candidate) => candidate !== option) : [...selected, option]);
+    setCalculation({ status: 'idle' });
+  }
+
+  async function calculateTarget() {
+    const query = potentialQueryFor(item, type);
+    if (!query || targetOptions.length === 0) return;
+    calculationControllerRef.current?.abort();
+    const controller = new AbortController();
+    calculationControllerRef.current = controller;
+    setCalculation({ status: 'loading' });
+    try {
+      const response = await fetch('/api/rules/potential-target-probability', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
+        body: JSON.stringify({ ...query, targetOptions, minimumMatches, currentOptions: currentPotentialOptions(item, type) ?? undefined }),
+      });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.message);
+      if (!controller.signal.aborted) setCalculation({ status: 'ready', body });
+    } catch (error) {
+      if (!controller.signal.aborted) setCalculation({ status: 'error', message: error.message || '목표 확률을 계산하지 못했습니다.' });
+    }
+  }
+
+  const availableOptions = result.status === 'ready'
+    ? [...new Set(result.body.lines.flatMap((line) => line.map(({ option }) => option)))]
+    : [];
+  const targetSupported = potentialQueryFor(item, type)?.grade === 'legendary';
 
   return <dialog ref={dialogRef} aria-labelledby="potential-options-title" onClose={onClose} className="potential-options-dialog">
     <div className="dialog-heading"><div><span className="eyebrow">NEXON OFFICIAL DATA</span><h2 id="potential-options-title">공식 잠재 옵션표</h2></div><button className="icon-button" aria-label="공식 잠재 옵션표 닫기" onClick={close}><X /></button></div>
     <div className="mode-control potential-type" role="group" aria-label="잠재 종류"><button disabled={!regularAvailable} className={type === 'regular' ? 'active' : ''} aria-pressed={type === 'regular'} onClick={() => setType('regular')}>일반</button><button disabled={!additionalAvailable} className={type === 'additional' ? 'active' : ''} aria-pressed={type === 'additional'} onClick={() => setType('additional')}>에디셔널</button></div>
     {result.status === 'loading' && <div className="potential-loading"><LoaderCircle className="spin" />공식 확률표를 불러오는 중입니다.</div>}
     {result.status === 'error' && <div className="potential-error" role="alert">{result.message}</div>}
-    {result.status === 'ready' && <><div className="potential-meta"><strong>{item.item_name}</strong><span>{result.body.part} · {result.body.grade} · Lv. {result.body.levelBand}</span>{result.body.cached && <small>캐시됨</small>}</div><div className="potential-lines">{result.body.lines.map((line, index) => <section key={index}><h3>{index + 1}번째 옵션</h3><div>{line.map((entry) => <p key={`${entry.option}-${entry.probability}`}><span>{entry.option}</span><strong>{(entry.probability * 100).toFixed(6).replace(/0+$/, '').replace(/\.$/, '')}%</strong></p>)}</div></section>)}</div><a className="official-link" href={result.body.sourceUrl} target="_blank" rel="noreferrer">넥슨 공식 확률표 <ArrowUpRight size={13} /></a></>}
-    <p className="calculation-note">각 줄의 표기 확률입니다. 옵션 중복 제한과 동일 결과 재추첨을 반영한 목표 조합 확률은 아직 계산하지 않습니다.</p>
+    {result.status === 'ready' && <><div className="potential-meta"><strong>{item.item_name}</strong><span>{result.body.part} · {result.body.grade} · Lv. {result.body.levelBand}</span>{result.body.cached && <small>캐시됨</small>}</div><div className="potential-lines">{result.body.lines.map((line, index) => <section key={index}><h3>{index + 1}번째 옵션</h3><div>{line.map((entry) => <p key={`${entry.option}-${entry.probability}`}><span>{entry.option}</span><strong>{(entry.probability * 100).toFixed(6).replace(/0+$/, '').replace(/\.$/, '')}%</strong></p>)}</div></section>)}</div>{targetSupported ? <section className="potential-target-builder" aria-label="잠재 목표 확률 계산"><div className="potential-target-heading"><div><span className="eyebrow">TARGET OPTIONS</span><h3>목표 옵션 확률</h3></div><div className="mode-control" role="group" aria-label="최소 일치 줄 수">{[1, 2, 3].map((count) => <button key={count} className={minimumMatches === count ? 'active' : ''} aria-pressed={minimumMatches === count} onClick={() => { setMinimumMatches(count); setCalculation({ status: 'idle' }); }}>{count}줄 이상</button>)}</div></div><div className="potential-target-options">{availableOptions.map((option) => <label key={option}><input type="checkbox" checked={targetOptions.includes(option)} onChange={() => toggleTarget(option)} /><span>{option}</span></label>)}</div><button className="potential-calculate" disabled={targetOptions.length === 0 || calculation.status === 'loading'} onClick={calculateTarget}>{calculation.status === 'loading' ? <LoaderCircle className="spin" /> : <Target />}목표 확률 계산</button>{calculation.status === 'error' && <div className="potential-error" role="alert">{calculation.message}</div>}{calculation.status === 'ready' && <div className="potential-target-result" aria-label="잠재 목표 계산 결과"><p><span>{calculation.body.alreadySatisfied ? '현재 상태' : '1회 성공 확률'}</span><strong>{calculation.body.alreadySatisfied ? '목표 달성' : percent(calculation.body.probability)}</strong></p><p><span>평균 재설정</span><strong>{calculation.body.expectedResets === null ? '달성 불가' : `${calculation.body.expectedResets.toFixed(2)}회`}</strong></p><p><span>기대 메소</span><strong>{calculation.body.expectedMeso === null ? '계산 불가' : `${mesos.format(calculation.body.expectedMeso)} 메소`}</strong></p></div>}</section> : <p className="potential-target-unavailable">목표 조합 확률은 레전드리 등급만 지원합니다.</p>}<a className="official-link" href={result.body.sourceUrl} target="_blank" rel="noreferrer">넥슨 공식 확률표 <ArrowUpRight size={13} /></a></>}
+    <p className="calculation-note">줄별 표기 확률을 사용하며 최대 등장 횟수 제한과 현재 잠재와 완전히 동일한 결과의 재추첨을 반영합니다.</p>
   </dialog>;
 }

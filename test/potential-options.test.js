@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import request from 'supertest';
 import { createApp } from '../server/app.js';
 import { createPotentialOptionsService, parsePotentialOptionsHtml, PotentialOptionsError } from '../server/potential-options.js';
+import { loadUpgradeRules } from '../server/rules.js';
 
 const fixture = `
   <div class="cube_option"><ul>
@@ -120,6 +121,34 @@ test('potential line grade endpoint validates input and shares the proxy rate li
   const invalid = await request(invalidApp).post('/api/rules/potential-line-grades').send({ ...body, options: [] });
   assert.equal(invalid.status, 400);
   assert.equal(invalid.body.code, 'INVALID_POTENTIAL_LINE_INPUT');
+});
+
+test('legendary target probability endpoint returns reset count and expected mesos', async () => {
+  const rules = await loadUpgradeRules();
+  const potentialOptions = {
+    calculateTarget: async (input) => ({
+      grade: '레전드리', part: '장갑', levelBand: '120~200', sourceUrl: 'https://maplestory.nexon.com/Guide/OtherProbability/cube/black',
+      targetOptions: input.targetOptions, minimumMatches: input.minimumMatches,
+      probability: 0.25, expectedResets: 4, currentResultProbability: 0.01, conditionedOnDifferentResult: true,
+    }),
+  };
+  const app = createApp({ service: { configured: false, lookup() {} }, potentialOptions, rules });
+  const body = {
+    type: 'regular', grade: 'legendary', part: 'gloves', level: 200,
+    targetOptions: ['크리티컬 데미지 +8%'], minimumMatches: 2,
+    currentOptions: ['STR +12%', 'STR +9%', '올스탯 +6%'],
+  };
+
+  const response = await request(app).post('/api/rules/potential-target-probability').send(body);
+  assert.equal(response.status, 200);
+  assert.equal(response.body.probability, 0.25);
+  assert.equal(response.body.expectedResets, 4);
+  assert.equal(response.body.resetCost, 45_000_000);
+  assert.equal(response.body.expectedMeso, 180_000_000);
+
+  const unsupported = await request(app).post('/api/rules/potential-target-probability').send({ ...body, grade: 'unique' });
+  assert.equal(unsupported.status, 400);
+  assert.equal(unsupported.body.code, 'INVALID_POTENTIAL_TARGET_INPUT');
 });
 
 test('official lookup maps query codes, caches responses and reports upstream failures', async () => {
