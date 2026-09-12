@@ -36,3 +36,14 @@ docker run --rm -p 5173:5173 -v maple-runtime:/app/.runtime -e NEXON_API_KEY='<s
 API 키는 Docker 이미지에 넣지 말고 배포 플랫폼의 비밀 환경 변수로 등록해야 합니다. `TRUST_PROXY_HOPS`는 보안을 위해 기본값이 `0`입니다. 일반적인 단일 리버스 프록시 환경에서는 배포 환경 변수로 `TRUST_PROXY_HOPS=1`을 지정합니다. 프록시 단계가 다르다면 실제 구성에 맞게 변경해야 IP 기반 요청 제한이 올바르게 동작합니다.
 
 현재 Nexon API 일일 사용량은 `.runtime` 파일에 기록됩니다. 재배포 후에도 제한 기록을 유지하려면 이 경로에 영구 볼륨을 연결하고 운영 인스턴스는 하나만 실행해야 합니다. 여러 인스턴스로 확장하려면 공유 저장소 기반 사용량 제한으로 교체해야 합니다.
+
+## Render 배포
+
+루트의 `render.yaml`은 Singapore 리전의 단일 Docker 웹 서비스를 정의합니다. `/app/.runtime`에 1GB 영구 디스크를 연결하므로 [Render의 유료 웹 서비스와 디스크](https://render.com/docs/disks)가 필요합니다.
+
+1. Render Dashboard에서 **New > Blueprint**를 선택하고 이 GitHub 저장소를 연결합니다.
+2. Blueprint 생성 화면에서 `NEXON_API_KEY`에 과거에 노출되지 않은 새 키를 입력합니다.
+3. 예상 요금을 확인한 뒤 Blueprint를 적용합니다.
+4. 배포된 `onrender.com` 주소의 `/healthz`가 `{"status":"ok"}`를 반환하는지 확인합니다.
+
+Blueprint는 `main` 브랜치의 GitHub Actions 검사가 통과한 커밋만 자동 배포합니다. Render의 관리형 프록시에서는 `TRUST_PROXY_MODE=render`를 사용해 `X-Forwarded-For`의 첫 주소를 요청 제한 기준으로 사용합니다. 다른 호스팅 환경에는 이 값을 설정하지 마세요.

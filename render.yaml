@@ -1,0 +1,32 @@
+# yaml-language-server: $schema=https://json.schemastore.org/render.json
+services:
+  - type: web
+    name: maple-star-recommend
+    runtime: docker
+    repo: https://github.com/hyunbeomlee1227-dev/mapleStarRecommend
+    branch: main
+    region: singapore
+    plan: 0.5c-512mb
+    numInstances: 1
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /healthz
+    autoDeployTrigger: checksPass
+    maxShutdownDelaySeconds: 30
+    disk:
+      name: nexon-quota
+      mountPath: /app/.runtime
+      sizeGB: 1
+    envVars:
+      - key: NEXON_API_KEY
+        sync: false
+      - key: TRUST_PROXY_MODE
+        value: render
+      - key: NEXON_DAILY_LIMIT
+        value: "1000"
+      - key: NEXON_INTERVAL_MS
+        value: "250"
+      - key: LOOKUP_LIMIT_PER_MINUTE
+        value: "12"
+      - key: POTENTIAL_OPTIONS_LIMIT_PER_MINUTE
+        value: "30"

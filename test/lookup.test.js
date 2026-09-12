@@ -109,12 +109,12 @@ test('request limit cannot be bypassed by spoofed forwarded headers', async () =
   const result = await request(app).get('/api/character?name=검증').set('X-Forwarded-For', '5.6.7.8');
   assert.equal(result.status, 429); assert.equal(result.headers['retry-after'], '60');
 });
-test('trusted proxy mode applies rate limits to the forwarded client IP', async () => {
+test('Render proxy mode applies rate limits to the first forwarded client IP', async () => {
   const { service } = setup();
-  const app = createApp({ service, perMinute: 1, trustProxy: 1 });
-  const first = await request(app).get('/api/character?name=검증').set('X-Forwarded-For', '1.2.3.4');
-  const second = await request(app).get('/api/character?name=검증').set('X-Forwarded-For', '5.6.7.8');
-  const limited = await request(app).get('/api/character?name=검증').set('X-Forwarded-For', '1.2.3.4');
+  const app = createApp({ service, perMinute: 1, trustProxy: true });
+  const first = await request(app).get('/api/character?name=검증').set('X-Forwarded-For', '1.2.3.4, 10.0.0.1');
+  const second = await request(app).get('/api/character?name=검증').set('X-Forwarded-For', '5.6.7.8, 10.0.0.1');
+  const limited = await request(app).get('/api/character?name=검증').set('X-Forwarded-For', '1.2.3.4, 10.0.0.1');
   assert.equal(first.status, 200);
   assert.equal(second.status, 200);
   assert.equal(limited.status, 429);
