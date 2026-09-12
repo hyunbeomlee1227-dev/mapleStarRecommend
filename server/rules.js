@@ -49,6 +49,36 @@ const starforceOutcomeSchema = z.object({
   maintainProbability: z.number().min(0).max(1),
   destroyProbability: z.number().min(0).max(1),
 }).refine((outcome) => Math.abs(outcome.successProbability + outcome.maintainProbability + outcome.destroyProbability - 1) < 0.000001, '스타포스 결과 확률의 합은 1이어야 합니다.');
+const restoreResourceSchema = z.object({
+  requiredCopies: z.number().int().min(1).max(4),
+  restoreMeso: z.number().int().positive(),
+});
+const restoreLevels = ['130', '135', '140', '145', '150', '160', '200', '250'];
+const restoreStars = ['15', '16', '17', '18', '19', '20', '21', '22'];
+const restoreResourcesSchema = z.object({
+  sourceKind: z.literal('community'),
+  sourceUrl: z.string().url(),
+  verifiedAgainst: z.iso.date(),
+  levels: z.record(z.string().regex(/^\d+$/), z.record(z.string().regex(/^\d+$/), restoreResourceSchema)),
+}).superRefine(({ levels }, context) => {
+  if (Object.keys(levels).length !== restoreLevels.length || restoreLevels.some((level) => !levels[level])) {
+    context.addIssue({ code: 'custom', path: ['levels'], message: '스타포스 복구 메소표의 장비 레벨이 완전하지 않습니다.' });
+    return;
+  }
+  for (const level of restoreLevels) {
+    const expectedStars = ['130', '135'].includes(level) ? restoreStars.slice(0, 5) : restoreStars;
+    const actualStars = Object.keys(levels[level]);
+    if (actualStars.length !== expectedStars.length || expectedStars.some((star) => !levels[level][star])) {
+      context.addIssue({ code: 'custom', path: ['levels', level], message: '스타포스 복구 메소표의 강화 단계가 완전하지 않습니다.' });
+    }
+    for (const [star, resource] of Object.entries(levels[level])) {
+      const expectedCopies = Number(star) <= 18 ? 1 : Number(star) <= 20 ? 2 : Number(star) === 21 ? 3 : 4;
+      if (resource.requiredCopies !== expectedCopies) {
+        context.addIssue({ code: 'custom', path: ['levels', level, star, 'requiredCopies'], message: '온전 복구 장비 개수가 공식 구간 규칙과 다릅니다.' });
+      }
+    }
+  }
+});
 const fileSchema = z.object({
   version: z.string().min(1),
   updatedAt: z.iso.date(),
@@ -74,6 +104,7 @@ const fileSchema = z.object({
     minLevel: z.literal(1),
     maxLevel: z.literal(300),
   }),
+  starforceRestoreResources: restoreResourcesSchema,
 });
 
 export async function loadUpgradeRules(fileUrl = new URL('../data/upgrade-rules.json', import.meta.url)) {

@@ -9,7 +9,7 @@ import { createApp } from '../server/app.js';
 
 test('upgrade rule catalog exposes verified costs and blocks incomplete calculations', async () => {
   const rules = await loadUpgradeRules();
-  assert.equal(rules.version, '2026-09-11-v5');
+  assert.equal(rules.version, '2026-09-12-v6');
   assert.equal(rules.capabilities.potentialResetCost.status, 'verified');
   assert.equal(rules.capabilities.potentialTierUpgrade.status, 'verified');
   assert.equal(rules.capabilities.potentialTierUpgrade.usableForRecommendation, true);
@@ -28,6 +28,11 @@ test('upgrade rule catalog exposes verified costs and blocks incomplete calculat
     sourceKind: 'community', sourceUrl: 'https://github.com/kurateh/mesulive',
     verifiedAgainst: '2026-03-21', minLevel: 1, maxLevel: 300,
   });
+  assert.deepEqual(rules.starforceRestoreResources.levels['200']['18'], {
+    requiredCopies: 1,
+    restoreMeso: 4_005_000_000,
+  });
+  assert.match(rules.starforceRestoreResources.sourceUrl, /5361818/);
 });
 
 test('upgrade rule endpoint returns a public status summary without secrets', async () => {
@@ -64,6 +69,26 @@ test('verified potential cost bands must cover levels 1 through 300 exactly once
     source.potentialResetCosts.regular[1].minLevel = 159;
     await writeFile(file, JSON.stringify(source));
     await assert.rejects(loadUpgradeRules(file), /연속되어야 합니다/);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test('starforce recovery tables reject missing stages and incorrect copy counts', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'maple-restore-rules-'));
+  const source = JSON.parse(await readFile(new URL('../data/upgrade-rules.json', import.meta.url), 'utf8'));
+  try {
+    const missingStage = structuredClone(source);
+    delete missingStage.starforceRestoreResources.levels['200']['18'];
+    const missingFile = join(directory, 'missing.json');
+    await writeFile(missingFile, JSON.stringify(missingStage));
+    await assert.rejects(loadUpgradeRules(missingFile), /강화 단계가 완전하지 않습니다/);
+
+    const wrongCopies = structuredClone(source);
+    wrongCopies.starforceRestoreResources.levels['200']['21'].requiredCopies = 1;
+    const copiesFile = join(directory, 'copies.json');
+    await writeFile(copiesFile, JSON.stringify(wrongCopies));
+    await assert.rejects(loadUpgradeRules(copiesFile), /장비 개수가 공식 구간 규칙과 다릅니다/);
   } finally {
     await rm(directory, { recursive: true, force: true });
   }

@@ -63,12 +63,16 @@ test('equipment browsing, filters, detail and status remain usable', async ({ pa
   expect(await page.locator('.analysis-tabs').evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
   expect(await page.locator('.tier-table').evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
   await page.getByRole('tab', { name: '스타포스', exact: true }).click();
+  await expect(page.getByText('9개 장비 표시', { exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: '스타포스 강화' })).toBeVisible();
   await expect(page.getByText('16.85%', { exact: true }).first()).toBeVisible();
-  await expect(page.getByText('3,151,795,078 메소', { exact: true }).first()).toBeVisible();
+  const gloveStarforce = page.locator('.starforce-table .tier-row').filter({ hasText: '아케인셰이드 나이트글러브' });
+  await expect(gloveStarforce).toContainText('3,771,421,587 메소');
+  await expect(gloveStarforce).toContainText('기대 소모 장비 0.43개');
+  await expect(gloveStarforce).toContainText('4,005,000,000 메소');
   await expect(page.getByText('강화 규칙 2/5 검증')).toBeVisible();
   await page.getByText('강화 규칙 2/5 검증').click();
-  await expect(page.getByText('2026-09-11-v5 · 2026-09-11')).toBeVisible();
+  await expect(page.getByText('2026-09-12-v6 · 2026-09-12')).toBeVisible();
   await expect(page.getByText('잠재 재설정 비용', { exact: true })).toBeVisible();
   await expect(page.getByText('스타포스 기대 비용', { exact: true })).toBeVisible();
   await expect(page.getByText('순위 계산 대기', { exact: true })).toBeVisible();

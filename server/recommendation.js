@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { supportsStarforce } from '../shared/equipment.js';
+import { calculateNextStarCost } from './starforce.js';
 
 const itemSchema = z.object({
   item_name: z.string().min(1).max(200),
@@ -79,30 +80,6 @@ function potentialTierUpgrades(items, rules) {
   });
 }
 
-function starforceAttemptCost(level, star) {
-  if (star <= 9) return Math.round((1000 + (level ** 3 * (star + 1)) / 36) / 100) * 100;
-  const divisors = { 10: 571, 11: 314, 12: 214, 13: 157, 14: 107, 17: 150, 18: 70, 19: 45, 21: 125 };
-  const raw = level ** 3 * (star + 1) ** 2.7 / (divisors[star] ?? 200);
-  return 1000 + Math.round(raw / 100) * 100;
-}
-
-function expectedMesoToNextStar(level, startStar, outcomes) {
-  const targetStar = startStar + 1;
-  if (startStar < 12) return Math.round(starforceAttemptCost(level, startStar) / outcomes[String(startStar)].successProbability);
-  const coefficients = { [targetStar]: { constant: 0, reset: 0 } };
-  for (let star = targetStar - 1; star >= 12; star -= 1) {
-    const outcome = outcomes[String(star)];
-    const next = coefficients[star + 1];
-    const denominator = 1 - outcome.maintainProbability;
-    coefficients[star] = {
-      constant: (starforceAttemptCost(level, star) + outcome.successProbability * next.constant) / denominator,
-      reset: (outcome.successProbability * next.reset + outcome.destroyProbability) / denominator,
-    };
-  }
-  const atTwelve = coefficients[12].constant / (1 - coefficients[12].reset);
-  return Math.round(coefficients[startStar].constant + coefficients[startStar].reset * atTwelve);
-}
-
 function starforceRisks(items, rules) {
   if (!rules?.starforceOutcomes || !rules.starforceCostModel) return [];
   return items.flatMap((item) => {
@@ -110,17 +87,21 @@ function starforceRisks(items, rules) {
     const currentStar = Number(item.starforce);
     const outcome = rules.starforceOutcomes[String(currentStar)];
     if (!outcome || !item.baseEquipmentLevel) return [];
-    const restoreLevels = [130, 135, 140, 145, 150, 160, 200, 250];
-    const canRestore = currentStar >= 15 && restoreLevels.includes(item.baseEquipmentLevel);
-    const traceRecoveryStar = canRestore ? (currentStar >= 23 ? 22 : currentStar) : null;
-    const intactRecoveryCopies = !canRestore ? null : traceRecoveryStar <= 18 ? 1 : traceRecoveryStar <= 20 ? 2 : traceRecoveryStar === 21 ? 3 : 4;
+    const cost = calculateNextStarCost({
+      level: item.baseEquipmentLevel,
+      star: currentStar,
+      outcome,
+      restoreResources: rules.starforceRestoreResources?.levels,
+    });
     return [{
       type: 'starforce-risk', itemName: item.item_name, slot: item.item_equipment_slot, currentStar,
       ...outcome,
-      traceRecoveryStar,
-      intactRecoveryCopies,
-      attemptCost: starforceAttemptCost(item.baseEquipmentLevel, currentStar),
-      expectedMesoWithoutSpares: expectedMesoToNextStar(item.baseEquipmentLevel, currentStar, rules.starforceOutcomes),
+      traceRecoveryStar: cost.recovery?.targetStar ?? null,
+      intactRecoveryCopies: cost.recovery?.requiredCopies ?? null,
+      intactRecoveryMeso: cost.recovery?.restoreMeso ?? null,
+      attemptCost: cost.attemptCost,
+      expectedMesoWithOwnedRecoveryItems: cost.expectedMesoWithOwnedRecoveryItems,
+      expectedRecoveryCopies: cost.expectedRecoveryCopies,
       costSource: 'mesu-live-community-model',
     }];
   });

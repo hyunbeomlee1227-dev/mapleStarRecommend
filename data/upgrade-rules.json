@@ -1,6 +1,6 @@
 {
-  "version": "2026-09-11-v5",
-  "updatedAt": "2026-09-11",
+  "version": "2026-09-12-v6",
+  "updatedAt": "2026-09-12",
   "capabilities": {
     "potentialResetCost": {
       "label": "잠재 재설정 비용",
@@ -27,7 +27,7 @@
       "label": "스타포스 기대 비용",
       "status": "partial",
       "usableForRecommendation": false,
-      "message": "결과 확률과 흔적 규칙은 공식 자료, 기본 메소 비용은 mesu.live 공개 모델을 사용해 제한 조건의 기대 비용을 제공합니다.",
+      "message": "결과 확률과 흔적 규칙은 공식 자료, 기본·복구 메소는 mesu.live 공개 모델을 사용해 보유 스페어 조건의 기대 비용을 제공합니다. 스페어 구매가는 제외합니다.",
       "sources": ["https://maplestory.nexon.com/news/update/799", "https://github.com/kurateh/mesulive"]
     },
     "bossDamageModel": {
@@ -102,5 +102,86 @@
     "verifiedAgainst": "2026-03-21",
     "minLevel": 1,
     "maxLevel": 300
+  },
+  "starforceRestoreResources": {
+    "sourceKind": "community",
+    "sourceUrl": "https://github.com/kurateh/mesulive/blob/5361818f1c125e29c807d79e17f872b04a379d4b/src/entities/starforce/constants.ts",
+    "verifiedAgainst": "2026-04-19",
+    "levels": {
+      "130": {
+        "15": { "requiredCopies": 1, "restoreMeso": 119000000 },
+        "16": { "requiredCopies": 1, "restoreMeso": 287000000 },
+        "17": { "requiredCopies": 1, "restoreMeso": 485000000 },
+        "18": { "requiredCopies": 1, "restoreMeso": 1103000000 },
+        "19": { "requiredCopies": 2, "restoreMeso": 1827000000 }
+      },
+      "135": {
+        "15": { "requiredCopies": 1, "restoreMeso": 133000000 },
+        "16": { "requiredCopies": 1, "restoreMeso": 321000000 },
+        "17": { "requiredCopies": 1, "restoreMeso": 542000000 },
+        "18": { "requiredCopies": 1, "restoreMeso": 1231000000 },
+        "19": { "requiredCopies": 2, "restoreMeso": 2043000000 }
+      },
+      "140": {
+        "15": { "requiredCopies": 1, "restoreMeso": 148000000 },
+        "16": { "requiredCopies": 1, "restoreMeso": 358000000 },
+        "17": { "requiredCopies": 1, "restoreMeso": 605000000 },
+        "18": { "requiredCopies": 1, "restoreMeso": 1374000000 },
+        "19": { "requiredCopies": 2, "restoreMeso": 2279000000 },
+        "20": { "requiredCopies": 2, "restoreMeso": 4015000000 },
+        "21": { "requiredCopies": 3, "restoreMeso": 5045000000 },
+        "22": { "requiredCopies": 4, "restoreMeso": 8290000000 }
+      },
+      "145": {
+        "15": { "requiredCopies": 1, "restoreMeso": 165000000 },
+        "16": { "requiredCopies": 1, "restoreMeso": 398000000 },
+        "17": { "requiredCopies": 1, "restoreMeso": 671000000 },
+        "18": { "requiredCopies": 1, "restoreMeso": 1528000000 },
+        "19": { "requiredCopies": 2, "restoreMeso": 2540000000 },
+        "20": { "requiredCopies": 2, "restoreMeso": 4450000000 },
+        "21": { "requiredCopies": 3, "restoreMeso": 5605000000 },
+        "22": { "requiredCopies": 4, "restoreMeso": 9225000000 }
+      },
+      "150": {
+        "15": { "requiredCopies": 1, "restoreMeso": 183000000 },
+        "16": { "requiredCopies": 1, "restoreMeso": 441000000 },
+        "17": { "requiredCopies": 1, "restoreMeso": 745000000 },
+        "18": { "requiredCopies": 1, "restoreMeso": 1689000000 },
+        "19": { "requiredCopies": 2, "restoreMeso": 2803000000 },
+        "20": { "requiredCopies": 2, "restoreMeso": 4944000000 },
+        "21": { "requiredCopies": 3, "restoreMeso": 6224000000 },
+        "22": { "requiredCopies": 4, "restoreMeso": 10179000000 }
+      },
+      "160": {
+        "15": { "requiredCopies": 1, "restoreMeso": 222000000 },
+        "16": { "requiredCopies": 1, "restoreMeso": 535000000 },
+        "17": { "requiredCopies": 1, "restoreMeso": 903000000 },
+        "18": { "requiredCopies": 1, "restoreMeso": 2050000000 },
+        "19": { "requiredCopies": 2, "restoreMeso": 3402000000 },
+        "20": { "requiredCopies": 2, "restoreMeso": 5993000000 },
+        "21": { "requiredCopies": 3, "restoreMeso": 7531000000 },
+        "22": { "requiredCopies": 4, "restoreMeso": 12374000000 }
+      },
+      "200": {
+        "15": { "requiredCopies": 1, "restoreMeso": 433000000 },
+        "16": { "requiredCopies": 1, "restoreMeso": 1044000000 },
+        "17": { "requiredCopies": 1, "restoreMeso": 1764000000 },
+        "18": { "requiredCopies": 1, "restoreMeso": 4005000000 },
+        "19": { "requiredCopies": 2, "restoreMeso": 6644000000 },
+        "20": { "requiredCopies": 2, "restoreMeso": 11706000000 },
+        "21": { "requiredCopies": 3, "restoreMeso": 14709000000 },
+        "22": { "requiredCopies": 4, "restoreMeso": 24168000000 }
+      },
+      "250": {
+        "15": { "requiredCopies": 1, "restoreMeso": 846000000 },
+        "16": { "requiredCopies": 1, "restoreMeso": 2039000000 },
+        "17": { "requiredCopies": 1, "restoreMeso": 3446000000 },
+        "18": { "requiredCopies": 1, "restoreMeso": 7821000000 },
+        "19": { "requiredCopies": 2, "restoreMeso": 12977000000 },
+        "20": { "requiredCopies": 2, "restoreMeso": 22863000000 },
+        "21": { "requiredCopies": 3, "restoreMeso": 28728000000 },
+        "22": { "requiredCopies": 4, "restoreMeso": 47204000000 }
+      }
+    }
   }
 }

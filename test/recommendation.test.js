@@ -175,8 +175,9 @@ test('recommendation endpoint validates input and returns selected goal context'
   assert.deepEqual(response.body.supportedCalculations.starforceRisks[0], {
     type: 'starforce-risk', itemName: '장갑', slot: '장갑', currentStar: 18,
     successProbability: 0.1575, maintainProbability: 0.7751, destroyProbability: 0.0674,
-    traceRecoveryStar: 18, intactRecoveryCopies: 1, attemptCost: 324_061_900,
-    expectedMesoWithoutSpares: 3_151_795_078,
+    traceRecoveryStar: 18, intactRecoveryCopies: 1, intactRecoveryMeso: 4_005_000_000,
+    attemptCost: 324_061_900, expectedMesoWithOwnedRecoveryItems: 3_771_421_587,
+    expectedRecoveryCopies: 0.42793650793650795,
     costSource: 'mesu-live-community-model',
   });
   assert.equal(response.body.supportedCalculations.starforceRisks[1].traceRecoveryStar, null);
