@@ -152,9 +152,13 @@ test('job equipment observations preserve duplicate and non-starforce equipment 
 test('recommendation endpoint validates input and returns selected goal context', async () => {
   const rules = await loadUpgradeRules();
   const app = createApp({ service: { configured: false }, rules, equipmentTargets, goals: { goals: [goal], defaultGoalId: goal.id } });
+  const apiItems = [...items, {
+    item_name: '23성 검증 장비', item_equipment_slot: '상의', baseEquipmentLevel: 200, starforce: '23',
+    potential_option_grade: null, additional_potential_option_grade: null,
+  }];
   const invalid = await request(app).post('/api/recommendations').send({ goalId: goal.id, mode: 'budget', budgetMesos: null, combat, items });
   assert.equal(invalid.status, 400);
-  const response = await request(app).post('/api/recommendations').send({ goalId: goal.id, mode: 'all', budgetMesos: null, combat, items });
+  const response = await request(app).post('/api/recommendations').send({ goalId: goal.id, mode: 'all', budgetMesos: null, combat, items: apiItems });
   assert.equal(response.status, 200);
   assert.equal(response.body.goal.id, goal.id);
   assert.equal(response.body.status, 'model-pending');
@@ -182,4 +186,12 @@ test('recommendation endpoint validates input and returns selected goal context'
   });
   assert.equal(response.body.supportedCalculations.starforceRisks[1].traceRecoveryStar, null);
   assert.equal(response.body.supportedCalculations.starforceRisks[1].intactRecoveryCopies, null);
+  assert.deepEqual(response.body.supportedCalculations.starforceRisks[2], {
+    type: 'starforce-risk', itemName: '23성 검증 장비', slot: '상의', currentStar: 23,
+    successProbability: 0.105, maintainProbability: 0.716, destroyProbability: 0.179,
+    traceRecoveryStar: 22, intactRecoveryCopies: 4, intactRecoveryMeso: 24_168_000_000,
+    attemptCost: 213_124_000, expectedMesoWithOwnedRecoveryItems: 89_365_046_797,
+    expectedRecoveryCopies: 14.114346182917625,
+    costSource: 'mesu-live-community-model',
+  });
 });

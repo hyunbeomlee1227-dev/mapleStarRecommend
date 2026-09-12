@@ -91,6 +91,7 @@ function starforceRisks(items, rules) {
       level: item.baseEquipmentLevel,
       star: currentStar,
       outcome,
+      outcomes: rules.starforceOutcomes,
       restoreResources: rules.starforceRestoreResources?.levels,
     });
     return [{
