@@ -142,3 +142,23 @@ test('separate NEXON clients serialize updates to a shared quota file', async ()
     await rm(folder, { recursive: true, force: true });
   }
 });
+
+test('separate NEXON clients share the configured request interval', async () => {
+  const folder = await mkdtemp(join(tmpdir(), 'maple-quota-interval-'));
+  let time = 1000;
+  const starts = [];
+  try {
+    const options = {
+      apiKey: 'server-only-secret', intervalMs: 250, quotaFile: join(folder, 'quota.json'), now: () => time,
+      sleep: async (milliseconds) => { time += milliseconds; },
+      fetchImpl: async () => { starts.push(time); return Response.json({ ranking: [] }); },
+    };
+    await Promise.all([
+      createNexonService(options).requestRaw('ranking/overall', { date: '2026-09-10', class: '전사-히어로' }),
+      createNexonService(options).requestRaw('ranking/overall', { date: '2026-09-10', class: '마법사-비숍' }),
+    ]);
+    assert.equal(Math.abs(starts[1] - starts[0]), 250);
+  } finally {
+    await rm(folder, { recursive: true, force: true });
+  }
+});

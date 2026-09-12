@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
-import { dirname } from 'node:path';
+import { readFile } from 'node:fs/promises';
+import { writeFileAtomically } from './file-write.js';
 
 const usageSchema = z.object({
   itemName: z.string().min(1).max(200),
@@ -18,11 +18,17 @@ const observationSchema = z.object({
     item_name: z.string().trim().min(1),
   })).min(1),
 });
+const samplingSchema = z.object({
+  strategy: z.literal('job-stratified'),
+  samplesPerJob: z.number().int().min(3).max(20),
+  requestedJobs: z.number().int().positive(),
+  succeededJobs: z.number().int().nonnegative(),
+}).refine(({ requestedJobs, succeededJobs }) => succeededJobs <= requestedJobs, '직업 표본 집계 수가 올바르지 않습니다.');
 
 export const equipmentBaselinesSchema = z.object({
   version: z.string().min(1),
   source: z.object({
-    kind: z.literal('nexon-open-api-dojang'),
+    kind: z.enum(['nexon-open-api-dojang', 'nexon-open-api-overall-ranking']),
     url: z.url(),
   }),
   date: z.string().date(),
@@ -34,6 +40,38 @@ export const equipmentBaselinesSchema = z.object({
   }).refine(({ requested, succeeded, failed }) => requested === succeeded + failed, '표본 집계 수가 일치하지 않습니다.'),
   global: profileSchema,
   jobs: z.record(z.string(), profileSchema),
+  sampling: samplingSchema.optional(),
+}).superRefine((snapshot, context) => {
+  if (!snapshot.sampling) {
+    if (snapshot.source.kind === 'nexon-open-api-overall-ranking') {
+      context.addIssue({
+        code: 'custom',
+        message: '종합 랭킹 스냅샷에는 직업별 균등 표본 메타데이터가 필요합니다.',
+        path: ['sampling'],
+      });
+    }
+    return;
+  }
+
+  const { samplesPerJob, requestedJobs, succeededJobs } = snapshot.sampling;
+  const profiles = Object.values(snapshot.jobs);
+  const expectedSamples = requestedJobs * samplesPerJob;
+  const consistent = requestedJobs === succeededJobs
+    && profiles.length === requestedJobs
+    && profiles.every(({ sampleSize }) => sampleSize === samplesPerJob)
+    && snapshot.sample.requested === expectedSamples
+    && snapshot.sample.succeeded === expectedSamples
+    && snapshot.sample.failed === 0
+    && snapshot.global.sampleSize === expectedSamples
+    && profiles.reduce((total, { sampleSize }) => total + sampleSize, 0) === expectedSamples;
+
+  if (!consistent) {
+    context.addIssue({
+      code: 'custom',
+      message: '직업별 균등 표본 메타데이터와 실제 프로필이 일치하지 않습니다.',
+      path: ['sampling'],
+    });
+  }
 });
 
 function normalizeSlot(slot) {
@@ -66,7 +104,7 @@ export function assertObservationQuality({ requested, succeeded }, { minimumSamp
   }
 }
 
-export function buildEquipmentBaselines({ date, fetchedAt, requested, failures, samples, minimumJobSamples = 3 }) {
+export function buildEquipmentBaselines({ date, fetchedAt, requested, failures, samples, minimumJobSamples = 3, sampling = undefined, sourceKind = 'nexon-open-api-dojang' }) {
   const observations = z.array(observationSchema).parse(samples);
   const samplesByJob = new Map();
   for (const sample of observations) {
@@ -79,13 +117,14 @@ export function buildEquipmentBaselines({ date, fetchedAt, requested, failures, 
     if (jobSamples.length >= minimumJobSamples) jobs[job] = buildProfile(jobSamples);
   }
   return equipmentBaselinesSchema.parse({
-    version: `${date}-dojang-v1`,
-    source: { kind: 'nexon-open-api-dojang', url: 'https://openapi.nexon.com/ko/game/maplestory/?id=18' },
+    version: sourceKind === 'nexon-open-api-overall-ranking' ? `${date}-overall-job-v2` : sampling ? `${date}-dojang-job-v2` : `${date}-dojang-v1`,
+    source: { kind: sourceKind, url: 'https://openapi.nexon.com/ko/game/maplestory/?id=18' },
     date,
     fetchedAt,
     sample: { requested, succeeded: samples.length, failed: failures },
     global: buildProfile(observations),
     jobs,
+    ...(sampling ? { sampling } : {}),
   });
 }
 
@@ -93,7 +132,7 @@ export async function loadEquipmentBaselines(fileUrl = new URL('../data/equipmen
   return equipmentBaselinesSchema.parse(JSON.parse(await readFile(fileUrl, 'utf8')));
 }
 
-export async function collectEquipmentObservations({ service, ranking, date }) {
+export async function collectEquipmentObservations({ service, ranking, date, jobOverride = null }) {
   const samples = [];
   let failures = 0;
   let consecutiveUpstreamFailures = 0;
@@ -106,7 +145,7 @@ export async function collectEquipmentObservations({ service, ranking, date }) {
         : [];
       if (!items.length) throw new Error('missing equipment');
       samples.push({
-        job: entry.sub_class_name || entry.class_name,
+        job: jobOverride || entry.sub_class_name || entry.class_name,
         items: items.map(({ item_equipment_slot, item_name }) => ({ item_equipment_slot, item_name })),
       });
       consecutiveUpstreamFailures = 0;
@@ -124,6 +163,10 @@ export async function collectEquipmentObservations({ service, ranking, date }) {
   return { samples, failures };
 }
 
+async function writeEquipmentBaselines(output, result) {
+  await writeFileAtomically(output, `${JSON.stringify(result, null, 2)}\n`);
+}
+
 export async function refreshEquipmentBaselines({ service, date, limit, output, fetchedAt = new Date().toISOString() }) {
   const rankingResponse = await service.requestRaw('ranking/dojang', {
     date, world_name: '', difficulty: '1', class: '', page: '1',
@@ -133,9 +176,38 @@ export async function refreshEquipmentBaselines({ service, date, limit, output, 
   const { samples, failures } = await collectEquipmentObservations({ service, ranking, date });
   assertObservationQuality({ requested: ranking.length, succeeded: samples.length });
   const result = buildEquipmentBaselines({ date, fetchedAt, requested: ranking.length, failures, samples });
-  await mkdir(dirname(output), { recursive: true });
-  const temporaryOutput = `${output}.${process.pid}.tmp`;
-  await writeFile(temporaryOutput, `${JSON.stringify(result, null, 2)}\n`);
-  await rename(temporaryOutput, output);
+  await writeEquipmentBaselines(output, result);
+  return result;
+}
+
+export async function refreshJobStratifiedEquipmentBaselines({ service, date, samplesPerJob, classFilters, output, fetchedAt = new Date().toISOString() }) {
+  if (!Number.isSafeInteger(samplesPerJob) || samplesPerJob < 3 || samplesPerJob > 20) {
+    throw new Error('직업별 표본 수는 3에서 20 사이의 정수여야 합니다.');
+  }
+  if (!Array.isArray(classFilters) || classFilters.length === 0) throw new Error('직업 필터가 필요합니다.');
+  const samples = [];
+  let failures = 0;
+  for (const { filter, job } of classFilters) {
+    const rankingResponse = await service.requestRaw('ranking/overall', {
+      date, world_name: '', world_type: '0', class: filter, page: '1',
+    });
+    const ranking = Array.isArray(rankingResponse?.ranking) ? rankingResponse.ranking.slice(0, samplesPerJob) : [];
+    if (ranking.length < samplesPerJob) throw new Error(`${job} 직업별 표본이 부족합니다. ${ranking.length}/${samplesPerJob}`);
+    if (ranking.some((entry) => (entry.sub_class_name || entry.class_name) !== job)) {
+      throw new Error(`${job} 직업 필터 응답이 일치하지 않습니다.`);
+    }
+    const collected = await collectEquipmentObservations({ service, ranking, date, jobOverride: job });
+    if (collected.samples.length < samplesPerJob) throw new Error(`${job} 직업별 표본이 부족합니다. ${collected.samples.length}/${samplesPerJob}`);
+    samples.push(...collected.samples);
+    failures += collected.failures;
+  }
+  const sampling = {
+    strategy: 'job-stratified', samplesPerJob, requestedJobs: classFilters.length, succeededJobs: classFilters.length,
+  };
+  const result = buildEquipmentBaselines({
+    date, fetchedAt, requested: classFilters.length * samplesPerJob, failures, samples, minimumJobSamples: samplesPerJob, sampling,
+    sourceKind: 'nexon-open-api-overall-ranking',
+  });
+  await writeEquipmentBaselines(output, result);
   return result;
 }

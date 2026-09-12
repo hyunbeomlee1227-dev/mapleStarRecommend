@@ -1,13 +1,14 @@
 import { resolve } from 'node:path';
-import { refreshEquipmentBaselines } from '../server/equipment-baselines.js';
+import { refreshJobStratifiedEquipmentBaselines } from '../server/equipment-baselines.js';
 import { withFileLock } from '../server/file-lock.js';
+import { MAPLE_FINAL_JOBS } from '../server/maple-jobs.js';
 import { createNexonService, snapshotDate } from '../server/nexon.js';
 
-function integerArgument(name, fallback, maximum) {
+function integerArgument(name, fallback, minimum, maximum) {
   const prefix = `--${name}=`;
   const raw = process.argv.find((argument) => argument.startsWith(prefix))?.slice(prefix.length);
   const value = Number(raw ?? fallback);
-  if (!Number.isSafeInteger(value) || value < 1 || value > maximum) throw new Error(`${name} must be an integer from 1 to ${maximum}`);
+  if (!Number.isSafeInteger(value) || value < minimum || value > maximum) throw new Error(`${name} must be an integer from ${minimum} to ${maximum}`);
   return value;
 }
 
@@ -22,7 +23,7 @@ const apiKey = process.env.NEXON_API_KEY?.trim();
 if (!apiKey) throw new Error('NEXON_API_KEY is not configured');
 
 const date = dateArgument();
-const limit = integerArgument('limit', 20, 50);
+const samplesPerJob = integerArgument('samples-per-job', 3, 3, 10);
 const output = resolve('data/equipment-baselines.json');
 const service = createNexonService({
   apiKey,
@@ -32,6 +33,6 @@ const service = createNexonService({
 });
 
 await withFileLock(`${output}.refresh-locks`, async () => {
-  const result = await refreshEquipmentBaselines({ service, date, limit, output });
-  process.stdout.write(`Saved ${result.sample.succeeded}/${result.sample.requested} anonymized samples for ${date}.\n`);
+  const result = await refreshJobStratifiedEquipmentBaselines({ service, date, samplesPerJob, classFilters: MAPLE_FINAL_JOBS, output });
+  process.stdout.write(`Saved ${result.sample.succeeded} anonymized samples across ${result.sampling.succeededJobs} jobs for ${date}.\n`);
 }, { timeoutMs: 2000, staleMs: 30 * 60000 });

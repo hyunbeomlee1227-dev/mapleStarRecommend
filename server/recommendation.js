@@ -14,6 +14,7 @@ const itemSchema = z.object({
 
 export const recommendationRequestSchema = z.object({
   goalId: z.string().min(1).max(100),
+  characterJob: z.string().min(1).max(100).nullable().optional(),
   mode: z.enum(['all', 'budget']),
   budgetMesos: z.number().int().positive().max(Number.MAX_SAFE_INTEGER).nullable(),
   combat: z.object({
@@ -26,6 +27,27 @@ export const recommendationRequestSchema = z.object({
     context.addIssue({ code: 'custom', path: ['budgetMesos'], message: '예산 내 추천에는 예산이 필요합니다.' });
   }
 });
+
+function jobEquipmentReference(characterJob, items, equipmentBaselines) {
+  if (!characterJob || equipmentBaselines?.sampling?.strategy !== 'job-stratified') return { status: 'unavailable' };
+  const profile = equipmentBaselines.jobs?.[characterJob];
+  if (!profile || profile.sampleSize < equipmentBaselines.sampling.samplesPerJob) return { status: 'unavailable' };
+  const equippedBySlot = new Map();
+  for (const item of items) {
+    const slot = item.item_equipment_slot.replace(/\d+$/, '');
+    const equippedItems = equippedBySlot.get(slot) ?? [];
+    equippedItems.push(item.item_name);
+    equippedBySlot.set(slot, equippedItems);
+  }
+  const slots = [...equippedBySlot].flatMap(([slot, equippedItems]) => {
+    const observed = profile.slots?.[slot]?.slice(0, 3) ?? [];
+    return observed.length ? [{ slot, equippedItems, observed }] : [];
+  });
+  return {
+    status: 'available', job: characterJob, sampleSize: profile.sampleSize,
+    date: equipmentBaselines.date, version: equipmentBaselines.version, slots,
+  };
+}
 
 const gradeIds = { '레어': 'rare', '에픽': 'epic', '유니크': 'unique', '레전드리': 'legendary' };
 
@@ -149,7 +171,7 @@ function equipmentRecommendations(goal, items, equipmentTargets) {
   return [...bestByItem.values()];
 }
 
-export function buildRecommendationPlan({ goal, mode, budgetMesos, combat, items, rules, equipmentTargets }) {
+export function buildRecommendationPlan({ goal, mode, budgetMesos, combat, characterJob, items, rules, equipmentTargets, equipmentBaselines }) {
   const ruleTrace = { rulesVersion: rules?.version ?? null, rulesUpdatedAt: rules?.updatedAt ?? null };
   const coverage = {
     equipment: items.length,
@@ -157,9 +179,10 @@ export function buildRecommendationPlan({ goal, mode, budgetMesos, combat, items
     potential: items.filter((item) => Boolean(item.potential_option_grade)).length,
     additionalPotential: items.filter((item) => Boolean(item.additional_potential_option_grade)).length,
   };
-  if (!goal) return { status: 'unknown-goal', message: '지원하는 목표 보스를 선택해 주세요.', mode, budgetMesos, coverage, blockers: ['goal'], ...ruleTrace };
+  const equipmentReference = jobEquipmentReference(characterJob, items, equipmentBaselines);
+  if (!goal) return { status: 'unknown-goal', message: '지원하는 목표 보스를 선택해 주세요.', mode, budgetMesos, coverage, blockers: ['goal'], jobEquipmentReference: equipmentReference, ...ruleTrace };
   if (combat.readiness !== 'snapshot-ready') {
-    return { status: 'insufficient-data', message: combat.message || '보스전 비교에 필요한 능력치가 부족합니다.', mode, budgetMesos, coverage, blockers: ['combat-snapshot'], ...ruleTrace };
+    return { status: 'insufficient-data', message: combat.message || '보스전 비교에 필요한 능력치가 부족합니다.', mode, budgetMesos, coverage, blockers: ['combat-snapshot'], jobEquipmentReference: equipmentReference, ...ruleTrace };
   }
   const blockers = rules
     ? Object.entries(rules.capabilities).filter(([, capability]) => !capability.usableForRecommendation).map(([id]) => id)
@@ -178,6 +201,7 @@ export function buildRecommendationPlan({ goal, mode, budgetMesos, combat, items
       sourceKind: 'curated-rule',
       budgetApplied: false,
     },
+    jobEquipmentReference: equipmentReference,
     supportedCalculations: {
       potentialTierUpgrades: potentialTierUpgrades(items, rules),
       starforceRisks: starforceRisks(items, rules),

@@ -115,6 +115,40 @@ test('equipment family targets evaluate every matching equipped item', () => {
   ]);
 });
 
+test('job equipment observations are exposed as reference data, not efficiency rankings', () => {
+  const equipmentBaselines = {
+    version: '2026-09-10-overall-job-v2', date: '2026-09-10',
+    sampling: { strategy: 'job-stratified', samplesPerJob: 3, requestedJobs: 48, succeededJobs: 48 },
+    jobs: { 히어로: { sampleSize: 3, slots: { 모자: [
+      { itemName: '에테르넬 나이트헬름', count: 2, slotItemShare: 2 / 3 },
+      { itemName: '하이네스 워리어헬름', count: 1, slotItemShare: 1 / 3 },
+    ] } } },
+  };
+  const result = buildRecommendationPlan({ goal, mode: 'all', budgetMesos: null, combat, characterJob: '히어로', items, equipmentBaselines });
+  assert.deepEqual(result.jobEquipmentReference, {
+    status: 'available', job: '히어로', sampleSize: 3, date: '2026-09-10', version: '2026-09-10-overall-job-v2',
+    slots: [{ slot: '모자', equippedItems: ['모자'], observed: [
+      { itemName: '에테르넬 나이트헬름', count: 2, slotItemShare: 2 / 3 },
+      { itemName: '하이네스 워리어헬름', count: 1, slotItemShare: 1 / 3 },
+    ] }],
+  });
+  assert.equal('efficiency' in result.jobEquipmentReference.slots[0], false);
+});
+
+test('job equipment observations preserve duplicate and non-starforce equipment independently of combat readiness', () => {
+  const equipmentBaselines = {
+    version: 'observed-v2', date: '2026-09-10', sampling: { strategy: 'job-stratified', samplesPerJob: 3 },
+    jobs: { 히어로: { sampleSize: 3, slots: { 반지: [{ itemName: '거대한 공포', count: 3, slotItemShare: 0.25 }] } } },
+  };
+  const rings = [
+    { item_name: '가디언 엔젤 링', item_equipment_slot: '반지1', starforce: '18' },
+    { item_name: '리스트레인트 링', item_equipment_slot: '반지2', starforce: '0', special_ring_level: 4 },
+  ];
+  const result = buildRecommendationPlan({ goal, mode: 'all', budgetMesos: null, combat: { readiness: 'missing', message: '부족' }, characterJob: '히어로', items: rings, equipmentBaselines });
+  assert.equal(result.status, 'insufficient-data');
+  assert.deepEqual(result.jobEquipmentReference.slots[0].equippedItems, ['가디언 엔젤 링', '리스트레인트 링']);
+});
+
 test('recommendation endpoint validates input and returns selected goal context', async () => {
   const rules = await loadUpgradeRules();
   const app = createApp({ service: { configured: false }, rules, equipmentTargets, goals: { goals: [goal], defaultGoalId: goal.id } });

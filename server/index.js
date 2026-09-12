@@ -7,6 +7,7 @@ import { loadGoals } from './goals.js';
 import { loadUpgradeRules } from './rules.js';
 import { createPotentialOptionsService } from './potential-options.js';
 import { loadEquipmentTargets } from './equipment-targets.js';
+import { loadEquipmentBaselines } from './equipment-baselines.js';
 
 const production = process.argv.includes('--production');
 function integer(name, fallback, minimum = 1) {
@@ -23,8 +24,9 @@ const service = createNexonService({
 const goals = await loadGoals();
 const rules = await loadUpgradeRules();
 const equipmentTargets = await loadEquipmentTargets();
+const equipmentBaselines = await loadEquipmentBaselines();
 const potentialOptions = createPotentialOptionsService();
-const app = createApp({ service, potentialOptions, goals, rules, equipmentTargets, perMinute: integer('LOOKUP_LIMIT_PER_MINUTE', 12), potentialOptionsPerMinute: integer('POTENTIAL_OPTIONS_LIMIT_PER_MINUTE', 30) });
+const app = createApp({ service, potentialOptions, goals, rules, equipmentTargets, equipmentBaselines, perMinute: integer('LOOKUP_LIMIT_PER_MINUTE', 12), potentialOptionsPerMinute: integer('POTENTIAL_OPTIONS_LIMIT_PER_MINUTE', 30) });
 const server = createServer(app);
 let vite;
 if (production) {

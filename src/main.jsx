@@ -70,17 +70,24 @@ function App() {
   }, [goalId, data]);
   useEffect(() => {
     if (!goalId || !data.combat) return;
+    const setRecommendationStatus = (status, message) => setRecommendation((current) => ({
+      status,
+      message,
+      ...(current.jobEquipmentReference?.job === data.character.job
+        ? { jobEquipmentReference: current.jobEquipmentReference }
+        : {}),
+    }));
     let budgetMesos = null;
     if (recommendationMode === 'budget') {
       const amount = Number(budget);
       if (!budget || !Number.isFinite(amount) || amount <= 0 || amount > 90000000) {
-        setRecommendation({ status: 'input-required', message: '예산을 0보다 큰 억 메소 단위로 입력해 주세요.' });
+        setRecommendationStatus('input-required', '예산을 0보다 큰 억 메소 단위로 입력해 주세요.');
         return;
       }
       budgetMesos = Math.round(amount * 100000000);
     }
     const controller = new AbortController();
-    setRecommendation({ status: 'loading', message: '강화 후보를 확인하는 중입니다.' });
+    setRecommendationStatus('loading', '강화 후보를 확인하는 중입니다.');
     const items = data.items.map(({ item_name, item_equipment_slot, item_equipment_part, item_total_option, item_base_option, starforce, special_ring_level, potential_option_grade, additional_potential_option_grade }) => ({
       item_name,
       item_equipment_slot,
@@ -91,10 +98,10 @@ function App() {
       potential_option_grade,
       additional_potential_option_grade,
     }));
-    fetch('/api/recommendations', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ goalId, mode: recommendationMode, budgetMesos, combat: data.combat, items }), signal: controller.signal })
+    fetch('/api/recommendations', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ goalId, characterJob: data.character.job, mode: recommendationMode, budgetMesos, combat: data.combat, items }), signal: controller.signal })
       .then(async (response) => { const result = await response.json(); if (!response.ok) throw new Error(result.message); return result; })
       .then(setRecommendation)
-      .catch((error) => { if (!controller.signal.aborted) setRecommendation({ status: 'unavailable', message: error.message || '추천 조건을 확인하지 못했습니다.' }); });
+      .catch((error) => { if (!controller.signal.aborted) setRecommendationStatus('unavailable', error.message || '추천 조건을 확인하지 못했습니다.'); });
     return () => controller.abort();
   }, [goalId, data, recommendationMode, budget]);
   useEffect(() => { if (help) helpRef.current?.showModal(); else helpRef.current?.close(); }, [help]);
@@ -112,13 +119,16 @@ function App() {
       const result = await response.json();
       if (!response.ok) throw new Error(result.message || '캐릭터를 조회하지 못했습니다.');
       if (controller.signal.aborted) return;
+      setRecommendation({ status: 'loading', message: '직업별 장비 표본을 확인하는 중입니다.' });
       setData(result); setSelected(result.items[0] || null); setFilter(''); setGrade('all'); setTab('equipment');
       setRecent(saveRecent(query)); setConnection('ready');
     } catch (error) { if (!controller.signal.aborted) setError(error.message || '연결을 확인한 뒤 다시 시도해 주세요.'); }
     finally { if (!controller.signal.aborted) setLoading(false); }
   }
   function showDemo() {
-    abort.current?.abort(); setLoading(false); setError(''); setData(demo); setSelected(demo.items[0]); setFilter(''); setGrade('all'); setTab('equipment');
+    abort.current?.abort(); setLoading(false); setError('');
+    setRecommendation({ status: 'loading', message: '직업별 장비 표본을 확인하는 중입니다.' });
+    setData(demo); setSelected(demo.items[0]); setFilter(''); setGrade('all'); setTab('equipment');
   }
   const items = data.items.filter((item) => `${item.item_name} ${item.item_equipment_slot}`.includes(filter) && (grade === 'all' || item.potential_option_grade === grade));
   if (sort === 'stars') items.sort((a, b) => Number(b.starforce || 0) - Number(a.starforce || 0));
@@ -130,6 +140,7 @@ function App() {
   const tierCandidates = recommendation.supportedCalculations?.potentialTierUpgrades ?? [];
   const starforceRisks = recommendation.supportedCalculations?.starforceRisks ?? [];
   const equipmentRecommendations = recommendation.equipmentRecommendations ?? [];
+  const jobEquipmentReference = recommendation.jobEquipmentReference;
   function selectBoss(boss) {
     const candidates = goals.goals.filter((goal) => goal.boss === boss);
     const matchingDifficulty = candidates.find((goal) => goal.difficulty === selectedGoal?.difficulty);
@@ -169,6 +180,10 @@ function App() {
       <section className="equipment-recommendations" aria-label="일반 직업군 장비 목표"><div className="equipment-recommendation-heading"><div><span>GENERAL JOB EQUIPMENT TARGET</span><h3>일반 직업군 장비 목표</h3></div>{recommendationMode === 'budget' && <span className="budget-not-applied-token">예산 필터 미적용</span>}</div>
         {recommendation.status === 'loading' ? <p className="recommendation-empty">장비 목표를 확인하는 중입니다.</p> : equipmentRecommendations.length ? <div className="equipment-recommendation-list">{equipmentRecommendations.map((item) => <article key={`${item.ruleId}:${item.slot}:${item.itemName}`}><div className="equipment-recommendation-item"><div><small>{item.slot}</small><strong>{item.itemName}</strong></div><span>{item.actions.join(', ')}</span></div><p>{item.reason}</p></article>)}</div> : <p className="recommendation-empty">이 보스 구간에 등록된 장비 목표가 없습니다.</p>}
         <p className="recommendation-note">{recommendation.equipmentTargetTrace?.version || '목표 규칙 불러오는 중'} · 일반 직업의 공통 장비군 기준이며 최종뎀 및 메소당 효율 순위는 아직 적용되지 않습니다.</p>
+      </section>
+      <section className="job-equipment-reference" aria-label="같은 직업 장비 관측"><div className="equipment-recommendation-heading"><div><span>OFFICIAL RANKING OBSERVATION</span><h3>{data.character.job} 장비 사용 참고</h3></div>{jobEquipmentReference?.status === 'available' && <span className="observation-token">표본 {jobEquipmentReference.sampleSize}명</span>}</div>
+        {recommendation.status === 'loading' ? <p className="recommendation-empty">직업별 장비 표본을 확인하는 중입니다.</p> : jobEquipmentReference?.status === 'available' && jobEquipmentReference.slots.length ? <div className="job-reference-list">{jobEquipmentReference.slots.map((entry) => <article key={entry.slot}><div><small>{entry.slot}</small><strong>{entry.equippedItems.join(' · ')}</strong></div><ul>{entry.observed.map((observed) => { const equipped = entry.equippedItems.includes(observed.itemName); return <li key={observed.itemName} className={equipped ? 'equipped' : ''}><span>{observed.itemName}</span><small>{observed.count}회 관측{equipped ? ' · 현재 장비' : ''}</small></li>; })}</ul></article>)}</div> : <p className="recommendation-empty">이 직업의 균등 표본은 아직 준비되지 않았습니다.</p>}
+        <p className="recommendation-note">{jobEquipmentReference?.status === 'available' ? `${jobEquipmentReference.date} · ${jobEquipmentReference.version}` : '직업별 표본 준비 중'} · NEXON 공식 종합 랭킹의 익명 장비 사용 빈도이며 성능·가격·강화 우선순위를 뜻하지 않습니다.</p>
       </section>
       <details className="rule-status"><summary>강화 규칙 {rules.summary.verified}/{rules.summary.total} 검증</summary><div><span className="rule-version">{rules.version || '불러오는 중'} · {rules.updatedAt || '기준일 확인 중'}</span>{Object.entries(rules.capabilities).map(([id, capability]) => <p key={id}><strong className={['rule-', capability.status].join('')}>{capability.status === 'verified' ? '검증' : capability.status === 'partial' ? '부분' : '미지원'}</strong><span>{capability.label}</span><small>{capability.message}</small></p>)}</div></details>
       <footer><span>메이플 스타</span><a href="https://openapi.nexon.com/ko/game/maplestory/" target="_blank" rel="noreferrer">Data based on NEXON Open API <ArrowUpRight size={12} /></a><span>넥슨 공식 서비스가 아닙니다.</span></footer>

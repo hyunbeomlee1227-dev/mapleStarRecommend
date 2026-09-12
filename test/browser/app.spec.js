@@ -156,8 +156,9 @@ test('equipment analysis separates Maple upgrade views and preserves duplicate r
   await expect(page.getByRole('heading', { name: '장비 업그레이드' })).toBeVisible();
   await page.screenshot({ path: `test-results/upgrade-${info.project.name}.png`, fullPage: true });
   await page.getByRole('tab', { name: '스타포스', exact: true }).click();
-  await expect(page.getByRole('heading', { name: '스타포스 강화' })).toBeVisible();
-  await expect(page.getByText('메달', { exact: true })).toHaveCount(0);
+  const starforcePanel = page.getByRole('tabpanel', { name: '스타포스' });
+  await expect(starforcePanel.getByRole('heading', { name: '스타포스 강화' })).toBeVisible();
+  await expect(starforcePanel.getByText('메달', { exact: true })).toHaveCount(0);
   await page.getByRole('tab', { name: '잠재능력', exact: true }).click();
   await expect(page.getByRole('heading', { name: '잠재능력 강화' })).toBeVisible();
   await page.screenshot({ path: `test-results/potential-${info.project.name}.png`, fullPage: true });
@@ -176,4 +177,44 @@ test('Astra secondary weapons show stars while special rings do not', async ({ p
   await page.getByRole('button', { name: '캐릭터 조회', exact: true }).click();
   await expect(page.getByRole('button', { name: '아스트라 여의보주 상세 보기' }).locator('.star-value')).toContainText('18');
   await expect(page.getByRole('button', { name: '리스트레인트 링 상세 보기' }).locator('.not-applicable')).toHaveText('-');
+});
+
+test('job equipment reference uses the anonymized stratified ranking snapshot', async ({ page }, info) => {
+  await page.goto('/');
+  const reference = page.getByLabel('같은 직업 장비 관측');
+  await expect(reference.getByRole('heading', { name: '히어로 장비 사용 참고' })).toBeVisible();
+  await expect(reference).toContainText('표본 3명');
+  await expect(reference).toContainText('에테르넬 나이트헬름');
+  await expect(reference).toContainText('성능·가격·강화 우선순위를 뜻하지 않습니다');
+  await page.getByRole('button', { name: '예산 내 추천' }).click();
+  await expect(page.getByLabel('강화 추천 조건')).toContainText('예산을 0보다 큰 억 메소 단위로 입력해 주세요');
+  await expect(reference).toContainText('에테르넬 나이트헬름');
+  expect(await reference.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+  await page.screenshot({ path: `test-results/job-equipment-reference-${info.project.name}.png`, fullPage: true });
+});
+
+test('switching characters never preserves the previous equipment reference', async ({ page }) => {
+  await page.goto('/');
+  const reference = page.getByLabel('같은 직업 장비 관측');
+  await expect(reference).toContainText('에테르넬 나이트헬름');
+
+  const { demo } = await import('../../src/demo.js');
+  await page.route('**/api/character?*', (route) => route.fulfill({
+    json: {
+      ...demo,
+      character: { ...demo.character, name: '새히어로' },
+      items: demo.items.map((item, index) => index === 0 ? { ...item, item_name: '새 캐릭터 모자' } : item),
+    },
+  }));
+  await page.route('**/api/recommendations', (route) => route.fulfill({
+    status: 503,
+    contentType: 'application/json',
+    body: JSON.stringify({ message: '추천 일시 중단' }),
+  }));
+
+  await page.getByLabel('캐릭터 이름', { exact: true }).fill('새히어로');
+  await page.getByRole('button', { name: '캐릭터 조회', exact: true }).click();
+  await expect(page.getByRole('heading', { name: '새히어로' })).toBeVisible();
+  await expect(reference).toContainText('이 직업의 균등 표본은 아직 준비되지 않았습니다.');
+  await expect(reference).not.toContainText('에테르넬 나이트헬름');
 });

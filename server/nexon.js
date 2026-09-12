@@ -1,10 +1,11 @@
 import { z } from 'zod';
-import { readFile, rename, writeFile } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import { buildCombatSnapshot } from './combat.js';
 import { withFileLock } from './file-lock.js';
+import { writeFileAtomically } from './file-write.js';
 
 export class LookupError extends Error {
-  constructor(code, message, status = 502) { super(message); this.code = code; this.status = status; }
+  constructor(code, message, status = 502, options) { super(message, options); this.code = code; this.status = status; }
 }
 
 export const nameSchema = z.string().trim().regex(/^[\p{L}\p{N}]{1,12}$/u, '캐릭터 이름은 한글·영문·숫자 1~12자로 입력해 주세요.');
@@ -64,7 +65,6 @@ export function createNexonService({ apiKey, fetchImpl = fetch, now = Date.now, 
   const cache = new Map();
   const pending = new Map();
   let queue = Promise.resolve();
-  let lastStart = -Infinity;
   let quota;
   async function withQuotaLock(task) {
     if (!quotaFile) return task();
@@ -83,26 +83,24 @@ export function createNexonService({ apiKey, fetchImpl = fetch, now = Date.now, 
         if (error.code !== 'ENOENT') throw new LookupError('QUOTA_STORAGE', '조회량 기록을 확인할 수 없습니다. 잠시 후 다시 시도해 주세요.', 503);
         quota = { day, count: 0 };
       }
-      if (typeof quota.day !== 'string' || !Number.isSafeInteger(quota.count) || quota.count < 0) throw new LookupError('QUOTA_STORAGE', '조회량 기록을 확인할 수 없습니다.', 503);
-      if (quota.day !== day) quota = { day, count: 0 };
+      if (typeof quota.day !== 'string' || !Number.isSafeInteger(quota.count) || quota.count < 0 || (quota.lastStartedAt != null && (!Number.isFinite(quota.lastStartedAt) || quota.lastStartedAt < 0))) throw new LookupError('QUOTA_STORAGE', '조회량 기록을 확인할 수 없습니다.', 503);
+      if (quota.day !== day) quota = { day, count: 0, lastStartedAt: null };
       if (quota.count >= dailyLimit) throw new LookupError('DAILY_LIMIT', '오늘의 캐릭터 조회 한도에 도달했습니다. 내일 다시 이용해 주세요.', 429);
+      const delay = quota.lastStartedAt == null ? 0 : intervalMs - (now() - quota.lastStartedAt);
+      if (delay > 0) await sleep(delay);
       quota.count += 1;
+      quota.lastStartedAt = now();
       if (quotaFile) {
         try {
-          const temporaryFile = `${quotaFile}.${process.pid}.tmp`;
-          await writeFile(temporaryFile, JSON.stringify(quota));
-          await rename(temporaryFile, quotaFile);
-        } catch { throw new LookupError('QUOTA_STORAGE', '조회량을 기록할 수 없어 요청을 중단했습니다.', 503); }
+          await writeFileAtomically(quotaFile, JSON.stringify(quota), { sleep });
+        } catch (error) { throw new LookupError('QUOTA_STORAGE', '조회량을 기록할 수 없어 요청을 중단했습니다.', 503, { cause: error }); }
       }
     });
   }
   function request(path, params) {
     if (!apiKey) return Promise.reject(new LookupError('NOT_CONFIGURED', 'NEXON API 연결 설정이 필요합니다.', 503));
     const job = queue.then(async () => {
-      const delay = intervalMs - (now() - lastStart);
-      if (delay > 0) await sleep(delay);
       await reserve();
-      lastStart = now();
       const url = new URL(`https://open.api.nexon.com/maplestory/v1/${path}`);
       Object.entries(params).forEach(([key, val]) => {
         if (val !== '' && val !== null && val !== undefined) url.searchParams.set(key, val);
