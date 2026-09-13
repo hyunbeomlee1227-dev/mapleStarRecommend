@@ -1,6 +1,6 @@
 # 공개 웹 서비스 배포
 
-Status: ready-for-agent
+Status: ready-for-human
 
 ## Problem Statement
 

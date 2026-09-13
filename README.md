@@ -48,6 +48,8 @@ API 키는 Docker 이미지에 넣지 말고 배포 플랫폼의 비밀 환경 �
 3. 모든 리소스가 무료 플랜인지 확인한 뒤 Blueprint를 적용합니다. 유료 플랜이나 디스크를 추가하지 마세요.
 4. 배포된 `onrender.com` 주소의 `/healthz`가 `{"status":"ok"}`를 반환하는지 확인합니다.
 
-Blueprint는 `main` 브랜치의 GitHub Actions 검사가 통과한 커밋만 자동 배포합니다. Render에서는 `TRUST_PROXY_MODE=render`를 사용해 Cloudflare가 호출자 값을 덮어쓰는 `CF-Connecting-IP`를 요청 제한 기준으로 사용하며, 위조 가능한 `X-Forwarded-For`는 신뢰하지 않습니다. 다른 호스팅 환경에는 이 값을 설정하지 마세요.
+`render.yaml`은 GitHub 검사가 통과한 커밋만 자동 배포하도록 선언합니다. 현재 서비스는 공개 저장소 URL로 연결되어 자동 배포를 사용할 수 없으므로, GitHub Actions 성공을 확인한 뒤 Render에서 최신 커밋을 수동 배포해야 합니다. GitHub App 저장소 연결을 완료하면 `autoDeployTrigger: checksPass`가 적용됩니다.
+
+Render에서는 `TRUST_PROXY_MODE=render`를 사용해 Cloudflare가 호출자 값을 덮어쓰는 `CF-Connecting-IP`를 요청 제한 기준으로 사용하며, 위조 가능한 `X-Forwarded-For`는 신뢰하지 않습니다. 다른 호스팅 환경에는 이 값을 설정하지 마세요.
 
 배포 상태 확인, 장애 구분, 롤백과 키 교체 방법은 [Render 운영 절차](docs/render-operations.md)를 참고하세요.

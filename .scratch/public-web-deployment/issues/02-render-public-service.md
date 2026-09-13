@@ -2,7 +2,7 @@
 
 Status: ready-for-human
 Type: task
-Progress: free-service-live; public-smoke-passed; proxy-hardening-pending-deploy
+Progress: free-service-live; public-smoke-passed; proxy-hardening-live-and-verified
 Depends on: 01
 
 ## 완료 기준
@@ -20,3 +20,5 @@ Depends on: 01
 - 2026-09-13: 무료 Docker 서비스가 `https://maple-star-recommend.onrender.com`에서 Live 상태가 되었고 운영 스모크 테스트를 통과했다.
 - 2026-09-13: 공개 검증에서 임의 `X-Forwarded-For`로 요청 제한을 우회할 수 있음을 발견해 Render 모드를 마지막 프록시 한 단계만 신뢰하도록 수정했다. 수정 배포 후 재검증이 필요하다.
 - 2026-09-13: 한 단계 신뢰 설정도 실제 Render에서 우회됨을 확인했다. 공식 Render 계약에 따라 `CF-Connecting-IP`만 검증해 사용하도록 다시 수정했다.
+- 2026-09-13: 커밋 `585ef22` 배포 후 동일 클라이언트 12회 요청에 이어 위조 `X-Forwarded-For` 요청이 `429`로 차단됨을 공개 환경에서 확인했다.
+- 2026-09-13: 저장소를 공개 URL로 연결해 GitHub App 기반 자동 배포는 아직 사용할 수 없다. GitHub Actions 성공 후 최신 커밋 수동 배포 절차를 README에 기록했다.

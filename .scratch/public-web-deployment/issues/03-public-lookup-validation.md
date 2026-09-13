@@ -1,8 +1,8 @@
 # 공개 캐릭터 조회 및 요청 제한 검증
 
-Status: ready-for-agent
+Status: ready-for-human
 Type: task
-Progress: live-lookup-and-responsive-layout-passed; rate-limit-bypass-found-and-fix-pending-deploy
+Progress: live-lookup-responsive-layout-and-rate-limit-passed
 Depends on: 02
 
 ## 완료 기준
@@ -19,3 +19,4 @@ Depends on: 02
 - 2026-09-13: 1280px 데스크톱과 390px 모바일에서 연결 상태와 조회 결과를 확인했고 모바일 문서 가로 넘침이 없었다.
 - 2026-09-13: 동일 클라이언트 13번째 요청은 `429`였으나 위조된 전달 헤더로 우회되는 운영 결함을 발견했다. 프록시 신뢰 수정 배포와 재검증 전까지 완료 처리하지 않는다.
 - 2026-09-13: Nexon 업스트림 오류와 일일 한도는 안전한 응답 및 비식별 운영 로그 단위 테스트로 검증한다. 운영 키의 1,000회 한도를 의도적으로 소진하는 공개 검증은 실제 사용자 조회를 막으므로 수행하지 않는다.
+- 2026-09-13: 최종 배포에서 위조된 `X-Forwarded-For`가 동일 클라이언트 제한을 우회하지 못하고 `429`로 차단됨을 확인했다.
