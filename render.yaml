@@ -6,17 +6,13 @@ services:
     repo: https://github.com/hyunbeomlee1227-dev/mapleStarRecommend
     branch: main
     region: singapore
-    plan: 0.5c-512mb
+    plan: free
     numInstances: 1
     dockerfilePath: ./Dockerfile
     dockerContext: .
     healthCheckPath: /healthz
     autoDeployTrigger: checksPass
     maxShutdownDelaySeconds: 30
-    disk:
-      name: nexon-quota
-      mountPath: /app/.runtime
-      sizeGB: 1
     envVars:
       - key: NEXON_API_KEY
         sync: false

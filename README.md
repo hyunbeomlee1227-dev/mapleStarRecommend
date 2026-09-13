@@ -39,11 +39,11 @@ API 키는 Docker 이미지에 넣지 말고 배포 플랫폼의 비밀 환경 �
 
 ## Render 배포
 
-루트의 `render.yaml`은 Singapore 리전의 단일 Docker 웹 서비스를 정의합니다. `/app/.runtime`에 1GB 영구 디스크를 연결하므로 [Render의 유료 웹 서비스와 디스크](https://render.com/docs/disks)가 필요합니다.
+루트의 `render.yaml`은 Singapore 리전의 단일 무료 Docker 웹 서비스를 정의합니다. 무료 서비스에는 [Render 영구 디스크](https://render.com/docs/disks)를 연결할 수 없으므로 `.runtime`의 NEXON API 사용량 기록은 재시작이나 재배포 시 초기화될 수 있습니다. NEXON 자체 호출 한도는 계속 적용되며, 한도 초과 시 서비스가 안전한 오류를 표시합니다.
 
 1. Render Dashboard에서 **New > Blueprint**를 선택하고 이 GitHub 저장소를 연결합니다.
 2. Blueprint 생성 화면에서 `NEXON_API_KEY`에 과거에 노출되지 않은 새 키를 입력합니다.
-3. 예상 요금을 확인한 뒤 Blueprint를 적용합니다.
+3. 모든 리소스가 무료 플랜인지 확인한 뒤 Blueprint를 적용합니다. 유료 플랜이나 디스크를 추가하지 마세요.
 4. 배포된 `onrender.com` 주소의 `/healthz`가 `{"status":"ok"}`를 반환하는지 확인합니다.
 
 Blueprint는 `main` 브랜치의 GitHub Actions 검사가 통과한 커밋만 자동 배포합니다. Render의 관리형 프록시에서는 `TRUST_PROXY_MODE=render`를 사용해 `X-Forwarded-For`의 첫 주소를 요청 제한 기준으로 사용합니다. 다른 호스팅 환경에는 이 값을 설정하지 마세요.
