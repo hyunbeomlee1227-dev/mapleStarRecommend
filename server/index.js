@@ -18,7 +18,7 @@ function integer(name, fallback, minimum = 1) {
 function trustProxy() {
   const mode = process.env.TRUST_PROXY_MODE?.trim();
   if (!mode) return integer('TRUST_PROXY_HOPS', 0, 0) || false;
-  if (mode === 'render') return true;
+  if (mode === 'render') return 1;
   throw new Error('Invalid configuration: TRUST_PROXY_MODE');
 }
 const service = createNexonService({

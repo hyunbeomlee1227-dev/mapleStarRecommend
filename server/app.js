@@ -4,7 +4,7 @@ import { assessGoal } from './combat.js';
 import { buildRecommendationPlan, recommendationRequestSchema } from './recommendation.js';
 import { PotentialOptionsError, potentialLineGradesSchema, potentialOptionsQuerySchema, potentialTargetProbabilitySchema } from './potential-options.js';
 
-export function createApp({ service, potentialOptions = null, goals = { goals: [], defaultGoalId: null }, equipmentTargets = { version: null, updatedAt: null, rules: [] }, equipmentBaselines = null, rules = { version: null, updatedAt: null, capabilities: {}, potentialResetCosts: { regular: [], additional: [] }, potentialTierUpgrades: { regular: {}, additional: {} }, starforceOutcomes: {}, starforceCostModel: null, summary: { verified: 0, partial: 0, unsupported: 0, total: 0 } }, perMinute = 12, potentialOptionsPerMinute = 30, trustProxy = false, now = Date.now }) {
+export function createApp({ service, potentialOptions = null, goals = { goals: [], defaultGoalId: null }, equipmentTargets = { version: null, updatedAt: null, rules: [] }, equipmentBaselines = null, rules = { version: null, updatedAt: null, capabilities: {}, potentialResetCosts: { regular: [], additional: [] }, potentialTierUpgrades: { regular: {}, additional: {} }, starforceOutcomes: {}, starforceCostModel: null, summary: { verified: 0, partial: 0, unsupported: 0, total: 0 } }, perMinute = 12, potentialOptionsPerMinute = 30, trustProxy = false, now = Date.now, logger = console }) {
   const app = express();
   app.disable('x-powered-by');
   if (trustProxy) app.set('trust proxy', trustProxy);
@@ -92,7 +92,10 @@ export function createApp({ service, potentialOptions = null, goals = { goals: [
     clients.set(key, current);
     try { res.json(await service.lookup(req.query.name)); }
     catch (error) {
-      if (error instanceof LookupError) return res.status(error.status).json({ code: error.code, message: error.message });
+      const status = error instanceof LookupError ? error.status : 500;
+      const code = error instanceof LookupError ? error.code : 'INTERNAL_ERROR';
+      if (status >= 429) logger.warn?.('character_lookup_failed', { code, status });
+      if (error instanceof LookupError) return res.status(status).json({ code, message: error.message });
       res.status(500).json({ code: 'INTERNAL_ERROR', message: '조회 중 문제가 발생했습니다. 잠시 후 다시 시도해 주세요.' });
     }
   });

@@ -1,8 +1,8 @@
 # Render 공개 서비스 배포
 
-Status: ready-for-agent
+Status: ready-for-human
 Type: task
-Progress: free-blueprint-and-render-proxy-mode-implemented; provisioning-pending
+Progress: free-service-live; public-smoke-passed; proxy-hardening-pending-deploy
 Depends on: 01
 
 ## 완료 기준
@@ -17,3 +17,5 @@ Depends on: 01
 
 - 2026-09-13: 공식 Render Blueprint와 웹 서비스 문서를 기준으로 Singapore 단일 Docker 서비스 구성을 구현했다.
 - 2026-09-13: 사용자 요청에 따라 무료 플랜으로 제한하고 유료 영구 디스크를 제거했다. 파일 기반 일일 사용량 기록은 재시작 시 초기화될 수 있다.
+- 2026-09-13: 무료 Docker 서비스가 `https://maple-star-recommend.onrender.com`에서 Live 상태가 되었고 운영 스모크 테스트를 통과했다.
+- 2026-09-13: 공개 검증에서 임의 `X-Forwarded-For`로 요청 제한을 우회할 수 있음을 발견해 Render 모드를 마지막 프록시 한 단계만 신뢰하도록 수정했다. 수정 배포 후 재검증이 필요하다.
