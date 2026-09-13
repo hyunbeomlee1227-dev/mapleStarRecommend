@@ -123,7 +123,7 @@ test('potential line grade endpoint validates input and shares the proxy rate li
   assert.equal(invalid.body.code, 'INVALID_POTENTIAL_LINE_INPUT');
 });
 
-test('legendary target probability endpoint returns reset count and expected mesos', async () => {
+test('potential target endpoint combines lower-tier progression and target option costs', async () => {
   const rules = await loadUpgradeRules();
   const potentialOptions = {
     calculateTarget: async (input) => ({
@@ -134,7 +134,7 @@ test('legendary target probability endpoint returns reset count and expected mes
   };
   const app = createApp({ service: { configured: false, lookup() {} }, potentialOptions, rules });
   const body = {
-    type: 'regular', grade: 'legendary', part: 'gloves', level: 200,
+    type: 'regular', grade: 'unique', targetGrade: 'legendary', part: 'gloves', level: 200,
     targetOptions: ['크리티컬 데미지 +8%'], minimumMatches: 2,
     currentOptions: ['STR +12%', 'STR +9%', '올스탯 +6%'],
   };
@@ -142,13 +142,31 @@ test('legendary target probability endpoint returns reset count and expected mes
   const response = await request(app).post('/api/rules/potential-target-probability').send(body);
   assert.equal(response.status, 200);
   assert.equal(response.body.probability, 0.25);
-  assert.equal(response.body.expectedResets, 4);
+  assert.equal(response.body.expectedResets, (1 / 0.014) + 3);
   assert.equal(response.body.resetCost, 45_000_000);
-  assert.equal(response.body.expectedMeso, 180_000_000);
+  assert.equal(response.body.expectedMeso, Math.round((1 / 0.014) * 38_250_000 + 3 * 45_000_000));
+  assert.equal(response.body.currentGrade, 'unique');
+  assert.equal(response.body.targetGrade, 'legendary');
+  assert.equal(response.body.tierSteps.length, 1);
+  assert.equal(response.body.guaranteeApplied, false);
 
-  const unsupported = await request(app).post('/api/rules/potential-target-probability').send({ ...body, grade: 'unique' });
-  assert.equal(unsupported.status, 400);
-  assert.equal(unsupported.body.code, 'INVALID_POTENTIAL_TARGET_INPUT');
+  const invalid = await request(app).post('/api/rules/potential-target-probability').send({ ...body, grade: 'legendary', targetGrade: 'unique' });
+  assert.equal(invalid.status, 400);
+  assert.equal(invalid.body.code, 'INVALID_POTENTIAL_TARGET_INPUT');
+});
+
+test('potential target lookup uses the requested target grade table', async () => {
+  const calls = [];
+  const service = createPotentialOptionsService({ fetchImpl: async (_url, options) => {
+    calls.push(String(options.body));
+    return new Response(fixture);
+  } });
+  const result = await service.calculateTarget({
+    type: 'regular', grade: 'epic', targetGrade: 'legendary', part: 'gloves', level: 200,
+    targetOptions: ['크리티컬 데미지 +8%'], minimumMatches: 1,
+  });
+  assert.match(calls[0], /nGrade=4/);
+  assert.equal(result.targetGrade, 'legendary');
 });
 
 test('official lookup maps query codes, caches responses and reports upstream failures', async () => {

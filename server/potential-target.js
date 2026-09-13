@@ -84,3 +84,46 @@ export function calculatePotentialTargetProbability({ lines, targetOptions, mini
     alreadySatisfied: false,
   };
 }
+
+const gradeOrder = ['rare', 'epic', 'unique', 'legendary'];
+
+export function calculatePotentialProgression({ currentGrade, targetGrade, targetExpectedResets, costs, tierRules }) {
+  const currentIndex = gradeOrder.indexOf(currentGrade);
+  const targetIndex = gradeOrder.indexOf(targetGrade);
+  if (currentIndex < 0 || targetIndex < currentIndex) throw new Error('목표 잠재 등급이 현재 등급보다 낮습니다.');
+  if (targetExpectedResets === null) {
+    return { expectedResets: null, expectedMeso: null, tierSteps: [], guaranteeApplied: false };
+  }
+
+  const tierSteps = [];
+  let expectedResets = 0;
+  let expectedMeso = 0;
+  for (let index = currentIndex; index < targetIndex; index++) {
+    const grade = gradeOrder[index];
+    const rule = tierRules?.[grade];
+    const resetCost = costs?.[grade];
+    if (!rule || rule.nextGrade !== gradeOrder[index + 1] || !resetCost) {
+      throw new Error(`${grade} 등급 상승 규칙 또는 비용을 확인할 수 없습니다.`);
+    }
+    const stepResets = 1 / rule.successProbability;
+    const stepMeso = Math.round(stepResets * resetCost);
+    tierSteps.push({
+      currentGrade: grade,
+      nextGrade: rule.nextGrade,
+      successProbability: rule.successProbability,
+      expectedResets: stepResets,
+      resetCost,
+      expectedMeso: stepMeso,
+      guaranteeFailures: rule.guaranteeFailures,
+    });
+    expectedResets += stepResets;
+    expectedMeso += stepMeso;
+  }
+
+  const targetResetCost = costs?.[targetGrade];
+  if (!targetResetCost) throw new Error('목표 등급의 잠재 재설정 비용을 확인할 수 없습니다.');
+  const targetResetsAfterArrival = Math.max(0, targetExpectedResets - (targetIndex > currentIndex ? 1 : 0));
+  expectedResets += targetResetsAfterArrival;
+  expectedMeso += Math.round(targetResetsAfterArrival * targetResetCost);
+  return { expectedResets, expectedMeso, tierSteps, guaranteeApplied: false };
+}

@@ -72,7 +72,7 @@ test('equipment browsing, filters, detail and status remain usable', async ({ pa
   await expect(gloveStarforce).toContainText('4,005,000,000 메소');
   await expect(page.getByText('강화 규칙 2/5 검증')).toBeVisible();
   await page.getByText('강화 규칙 2/5 검증').click();
-  await expect(page.getByText('2026-09-12-v7 · 2026-09-12')).toBeVisible();
+  await expect(page.getByText('2026-09-14-v8 · 2026-09-14')).toBeVisible();
   await expect(page.getByText('잠재 재설정 비용', { exact: true })).toBeVisible();
   await expect(page.getByText('스타포스 기대 비용', { exact: true })).toBeVisible();
   await expect(page.getByText('순위 계산 대기', { exact: true })).toBeVisible();
@@ -179,8 +179,10 @@ test('selected equipment can load official regular and additional potential opti
   releaseDelayedTarget();
   await delayedTargetFinished;
   await expect.poll(() => requests).toEqual(['regular', 'additional']);
-  await expect(page.getByText('목표 조합 확률은 레전드리 등급만 지원합니다.')).toBeVisible();
-  await expect(targetResult).toHaveCount(0);
+  await expect(page.getByRole('group', { name: '조회 및 목표 등급' })).toBeVisible();
+  await page.getByRole('button', { name: '레전드리', exact: true }).click();
+  await expect.poll(() => requests).toEqual(['regular', 'additional', 'additional']);
+  await expect(page.getByText('보장 누적 횟수는 반영하지 않습니다.', { exact: false })).toBeVisible();
   await page.getByLabel('공식 잠재 옵션표 닫기').click();
   if (info.project.name === 'mobile') await expect(page.getByLabel('장비 상세 닫기')).toBeVisible();
 });

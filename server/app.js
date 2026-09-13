@@ -4,6 +4,7 @@ import { LookupError } from './nexon.js';
 import { assessGoal } from './combat.js';
 import { buildRecommendationPlan, recommendationRequestSchema } from './recommendation.js';
 import { PotentialOptionsError, potentialLineGradesSchema, potentialOptionsQuerySchema, potentialTargetProbabilitySchema } from './potential-options.js';
+import { calculatePotentialProgression } from './potential-target.js';
 
 export function createApp({ service, potentialOptions = null, goals = { goals: [], defaultGoalId: null }, equipmentTargets = { version: null, updatedAt: null, rules: [] }, equipmentBaselines = null, rules = { version: null, updatedAt: null, capabilities: {}, potentialResetCosts: { regular: [], additional: [] }, potentialTierUpgrades: { regular: {}, additional: {} }, starforceOutcomes: {}, starforceCostModel: null, summary: { verified: 0, partial: 0, unsupported: 0, total: 0 } }, perMinute = 12, potentialOptionsPerMinute = 30, trustProxy = false, clientIpHeader = null, now = Date.now, logger = console }) {
   const app = express();
@@ -71,14 +72,24 @@ export function createApp({ service, potentialOptions = null, goals = { goals: [
     if (!potentialOptions) return res.status(503).json({ code: 'POTENTIAL_OPTIONS_UNAVAILABLE', message: '공식 잠재 옵션 조회가 준비되지 않았습니다.' });
     if (!reservePotentialLookup(req, res)) return;
     const band = rules.potentialResetCosts?.[parsed.data.type]?.find(({ minLevel, maxLevel }) => parsed.data.level >= minLevel && parsed.data.level <= maxLevel);
-    const resetCost = band?.costs?.legendary;
+    const resetCost = band?.costs?.[parsed.data.targetGrade];
     if (!resetCost) return res.status(503).json({ code: 'RULE_DATA_UNAVAILABLE', message: '이 장비의 잠재 재설정 비용을 확인할 수 없습니다.' });
     try {
       const result = await potentialOptions.calculateTarget(parsed.data);
+      const progression = calculatePotentialProgression({
+        currentGrade: parsed.data.grade,
+        targetGrade: parsed.data.targetGrade,
+        targetExpectedResets: result.expectedResets,
+        costs: band.costs,
+        tierRules: rules.potentialTierUpgrades?.[parsed.data.type],
+      });
       return res.json({
         ...result,
+        currentGrade: parsed.data.grade,
+        targetGrade: parsed.data.targetGrade,
         resetCost,
-        expectedMeso: result.expectedResets === null ? null : Math.round(result.expectedResets * resetCost),
+        targetGradeExpectedResets: result.expectedResets,
+        ...progression,
       });
     } catch (error) {
       if (error instanceof PotentialOptionsError) return res.status(error.status).json({ code: error.code, message: error.message });

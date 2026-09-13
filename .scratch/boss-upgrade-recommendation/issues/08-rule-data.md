@@ -2,7 +2,7 @@
 
 Status: ready-for-agent
 Type: research
-Progress: restore-and-legendary-target-models-implemented; lower-grade-targets-and-events-pending
+Progress: restore-and-all-grade-target-models-implemented; guarantee-counters-and-events-pending
 Depends on: 01 source survey
 
 ## 목적
@@ -66,3 +66,11 @@ Depends on: 01 source survey
 - 현재 잠재와 완전히 동일한 세 줄 결과는 표본공간에서 제외하여 게임의 재추첨 규칙을 반영한다. 현재 옵션이 공식 표와 일치하지 않으면 조용히 무시하지 않고 계산을 차단한다.
 - 사용자는 레전드리 장비에서 목표 옵션 여러 개와 최소 일치 줄 수를 선택해 1회 성공 확률, 평균 재설정 횟수와 기대 메소를 확인할 수 있다.
 - 낮은 등급은 등급 상승과 목표 옵션 출현을 함께 계산해야 하므로 미지원 상태를 명시하며, 이벤트·할인과 추천 목표 자동 선정도 남아 있다.
+
+### 2026-09-14 낮은 등급 목표 잠재 계산
+
+- 레어·에픽·유니크 장비에서도 현재 등급 이상 목표 등급을 선택하고 해당 등급의 공식 옵션표에서 목표 조합을 고를 수 있다.
+- 목표 등급까지 각 단계의 공식 상승 확률과 현재 등급별 재설정 비용을 합산한다. 마지막 상승 결과를 목표 옵션 첫 시도로 포함해 도착 시도를 중복 과금하지 않는다.
+- 현재와 목표 등급이 같을 때는 기존 세 줄과 완전히 동일한 결과의 재추첨을 계속 반영한다.
+- 월드 공유 보장 누적 횟수는 아직 입력받지 않으므로 보장 없는 기하 평균으로 표시하고, 화면과 API에 `guaranteeApplied: false`를 명시한다.
+- 보장 카운터 입력·상태 전이, 이벤트·할인과 추천 목표 자동 선정이 남아 있어 티켓과 capability는 부분 지원 상태를 유지한다.

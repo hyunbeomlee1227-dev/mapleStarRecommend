@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { calculatePotentialTargetProbability } from '../server/potential-target.js';
+import { calculatePotentialProgression, calculatePotentialTargetProbability } from '../server/potential-target.js';
 
 const usefulSkill = '<쓸만한 윈드 부스터> 스킬 사용 가능';
 const stat = 'STR +12%';
@@ -94,4 +94,28 @@ test('unknown current options are rejected instead of skipping identical-result 
     }),
     /현재 잠재 결과/,
   );
+});
+
+test('potential progression includes tier-up costs without charging the arrival roll twice', () => {
+  const result = calculatePotentialProgression({
+    type: 'regular', currentGrade: 'unique', targetGrade: 'legendary', targetExpectedResets: 4,
+    costs: { unique: 38_250_000, legendary: 45_000_000 },
+    tierRules: { unique: { nextGrade: 'legendary', successProbability: 0.014, guaranteeFailures: 107 } },
+  });
+
+  assert.equal(result.expectedResets, (1 / 0.014) + 3);
+  assert.equal(result.expectedMeso, Math.round((1 / 0.014) * 38_250_000 + 3 * 45_000_000));
+  assert.deepEqual(result.tierSteps, [{
+    currentGrade: 'unique', nextGrade: 'legendary', successProbability: 0.014,
+    expectedResets: 1 / 0.014, resetCost: 38_250_000,
+    expectedMeso: Math.round((1 / 0.014) * 38_250_000), guaranteeFailures: 107,
+  }]);
+  assert.equal(result.guaranteeApplied, false);
+});
+
+test('potential progression rejects incomplete grade paths instead of inventing costs', () => {
+  assert.throws(() => calculatePotentialProgression({
+    type: 'regular', currentGrade: 'epic', targetGrade: 'legendary', targetExpectedResets: 2,
+    costs: { epic: 18_000_000, legendary: 45_000_000 }, tierRules: {},
+  }), /등급 상승 규칙/);
 });

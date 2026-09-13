@@ -30,11 +30,16 @@ export const potentialLineGradesSchema = potentialOptionsQuerySchema.extend({
   options: z.array(z.string().min(1).max(500)).min(1).max(3),
 });
 export const potentialTargetProbabilitySchema = potentialOptionsQuerySchema.extend({
-  grade: z.literal('legendary'),
+  targetGrade: z.enum(Object.keys(grades)).default('legendary'),
   targetOptions: z.array(z.string().min(1).max(500)).min(1).max(30)
     .refine((options) => new Set(options.map(normalizePotentialOption)).size === options.length, '목표 옵션은 중복해서 선택할 수 없습니다.'),
   minimumMatches: z.number().int().min(1).max(3),
   currentOptions: z.array(z.string().min(1).max(500)).length(3).optional(),
+}).superRefine((value, context) => {
+  const order = Object.keys(grades);
+  if (order.indexOf(value.targetGrade) < order.indexOf(value.grade)) {
+    context.addIssue({ code: 'custom', path: ['targetGrade'], message: '목표 잠재 등급은 현재 등급보다 낮을 수 없습니다.' });
+  }
 });
 
 export class PotentialOptionsError extends Error {
@@ -126,20 +131,21 @@ export function createPotentialOptionsService({ fetchImpl = fetch, now = Date.no
   }
 
   async function calculateTarget(input) {
-    const table = await lookup(input);
+    const targetGrade = input.targetGrade ?? input.grade;
+    const table = await lookup({ ...input, grade: targetGrade });
     let calculation;
     try {
       calculation = calculatePotentialTargetProbability({
         lines: table.lines,
         targetOptions: input.targetOptions,
         minimumMatches: input.minimumMatches,
-        currentOptions: input.currentOptions,
+        currentOptions: targetGrade === input.grade ? input.currentOptions : null,
       });
     } catch (error) {
       throw new PotentialOptionsError('INVALID_CURRENT_POTENTIAL', error.message, 422);
     }
     const { lines: _lines, cached: _cached, ...metadata } = table;
-    return { ...metadata, targetOptions: input.targetOptions, minimumMatches: input.minimumMatches, ...calculation };
+    return { ...metadata, targetGrade, targetOptions: input.targetOptions, minimumMatches: input.minimumMatches, ...calculation };
   }
 
   return { lookup, classifyLines, calculateTarget };
