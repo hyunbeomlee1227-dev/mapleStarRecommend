@@ -12,7 +12,6 @@ services:
     dockerContext: .
     healthCheckPath: /healthz
     autoDeployTrigger: checksPass
-    maxShutdownDelaySeconds: 30
     envVars:
       - key: NEXON_API_KEY
         sync: false
