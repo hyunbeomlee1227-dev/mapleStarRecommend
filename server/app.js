@@ -1,15 +1,20 @@
 import express from 'express';
+import { isIP } from 'node:net';
 import { LookupError } from './nexon.js';
 import { assessGoal } from './combat.js';
 import { buildRecommendationPlan, recommendationRequestSchema } from './recommendation.js';
 import { PotentialOptionsError, potentialLineGradesSchema, potentialOptionsQuerySchema, potentialTargetProbabilitySchema } from './potential-options.js';
 
-export function createApp({ service, potentialOptions = null, goals = { goals: [], defaultGoalId: null }, equipmentTargets = { version: null, updatedAt: null, rules: [] }, equipmentBaselines = null, rules = { version: null, updatedAt: null, capabilities: {}, potentialResetCosts: { regular: [], additional: [] }, potentialTierUpgrades: { regular: {}, additional: {} }, starforceOutcomes: {}, starforceCostModel: null, summary: { verified: 0, partial: 0, unsupported: 0, total: 0 } }, perMinute = 12, potentialOptionsPerMinute = 30, trustProxy = false, now = Date.now }) {
+export function createApp({ service, potentialOptions = null, goals = { goals: [], defaultGoalId: null }, equipmentTargets = { version: null, updatedAt: null, rules: [] }, equipmentBaselines = null, rules = { version: null, updatedAt: null, capabilities: {}, potentialResetCosts: { regular: [], additional: [] }, potentialTierUpgrades: { regular: {}, additional: {} }, starforceOutcomes: {}, starforceCostModel: null, summary: { verified: 0, partial: 0, unsupported: 0, total: 0 } }, perMinute = 12, potentialOptionsPerMinute = 30, trustProxy = false, clientIpHeader = null, now = Date.now, logger = console }) {
   const app = express();
   app.disable('x-powered-by');
   if (trustProxy) app.set('trust proxy', trustProxy);
   const clients = new Map();
   const potentialClients = new Map();
+  function clientKey(req) {
+    const forwarded = clientIpHeader ? req.get(clientIpHeader)?.trim() : null;
+    return forwarded && isIP(forwarded) ? forwarded : req.ip;
+  }
   app.get('/healthz', (_req, res) => {
     res.set('Cache-Control', 'no-store');
     res.json({ status: 'ok' });
@@ -26,14 +31,15 @@ export function createApp({ service, potentialOptions = null, goals = { goals: [
   function reservePotentialLookup(req, res) {
     const time = now();
     for (const [ip, entry] of potentialClients) if (entry.until <= time) potentialClients.delete(ip);
-    const current = potentialClients.get(req.ip) ?? { count: 0, until: time + 60000 };
-    if (current.count >= potentialOptionsPerMinute || (!potentialClients.has(req.ip) && potentialClients.size >= 10000)) {
+    const key = clientKey(req);
+    const current = potentialClients.get(key) ?? { count: 0, until: time + 60000 };
+    if (current.count >= potentialOptionsPerMinute || (!potentialClients.has(key) && potentialClients.size >= 10000)) {
       res.set('Retry-After', '60');
       res.status(429).json({ code: 'RATE_LIMIT', message: '공식 잠재 옵션 조회가 많습니다. 1분 후 다시 시도해 주세요.' });
       return false;
     }
     current.count++;
-    potentialClients.set(req.ip, current);
+    potentialClients.set(key, current);
     return true;
   }
 
@@ -82,7 +88,7 @@ export function createApp({ service, potentialOptions = null, goals = { goals: [
   app.get('/api/character', async (req, res) => {
     const time = now();
     for (const [ip, entry] of clients) if (entry.until <= time) clients.delete(ip);
-    const key = req.ip;
+    const key = clientKey(req);
     const current = clients.get(key) ?? { count: 0, until: time + 60000 };
     if (current.count >= perMinute || (!clients.has(key) && clients.size >= 10000)) {
       res.set('Retry-After', '60');
@@ -92,7 +98,10 @@ export function createApp({ service, potentialOptions = null, goals = { goals: [
     clients.set(key, current);
     try { res.json(await service.lookup(req.query.name)); }
     catch (error) {
-      if (error instanceof LookupError) return res.status(error.status).json({ code: error.code, message: error.message });
+      const status = error instanceof LookupError ? error.status : 500;
+      const code = error instanceof LookupError ? error.code : 'INTERNAL_ERROR';
+      if (status >= 429) logger.warn?.('character_lookup_failed', { code, status });
+      if (error instanceof LookupError) return res.status(status).json({ code, message: error.message });
       res.status(500).json({ code: 'INTERNAL_ERROR', message: '조회 중 문제가 발생했습니다. 잠시 후 다시 시도해 주세요.' });
     }
   });

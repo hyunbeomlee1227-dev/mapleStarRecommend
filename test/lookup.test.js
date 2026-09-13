@@ -12,7 +12,7 @@ const now = () => Date.parse('2026-09-09T04:00:00Z');
 function setup(raw = responses(), options = {}) {
   const fake = upstream(raw);
   const service = createNexonService({ apiKey: 'server-only-secret', now, intervalMs: 0, fetchImpl: fake.fetchImpl, ...options });
-  return { ...fake, service, app: createApp({ service }) };
+  return { ...fake, service, app: createApp({ service, logger: { warn() {} } }) };
 }
 test('successful lookup preserves equipment details, caches and coalesces without exposing credentials', async () => {
   const { app, calls } = setup();
@@ -103,20 +103,39 @@ test('upstream errors become safe actionable messages', async () => {
   const { app } = setup(responses(), { fetchImpl: async () => { throw new Error('private'); } });
   assert.equal((await request(app).get('/api/character?name=검증')).body.code, 'UPSTREAM_UNAVAILABLE');
 });
+test('operational lookup failures are logged without request data or upstream messages', async () => {
+  const entries = [];
+  const { service } = setup(responses(), { fetchImpl: async () => Response.json({ error: { name: 'OPENAPI00007', message: 'server-only-secret' } }, { status: 429 }) });
+  const app = createApp({ service, logger: { warn: (event, details) => entries.push({ event, details }) } });
+
+  const result = await request(app).get('/api/character?name=검증캐릭터');
+
+  assert.equal(result.status, 429);
+  assert.deepEqual(entries, [{ event: 'character_lookup_failed', details: { code: 'UPSTREAM_LIMIT', status: 429 } }]);
+  assert.ok(!JSON.stringify(entries).includes('검증캐릭터'));
+  assert.ok(!JSON.stringify(entries).includes('server-only-secret'));
+});
 test('request limit cannot be bypassed by spoofed forwarded headers', async () => {
   const { service } = setup(); const app = createApp({ service, perMinute: 1 });
   await request(app).get('/api/character?name=검증').set('X-Forwarded-For', '1.2.3.4');
   const result = await request(app).get('/api/character?name=검증').set('X-Forwarded-For', '5.6.7.8');
   assert.equal(result.status, 429); assert.equal(result.headers['retry-after'], '60');
 });
-test('Render proxy mode applies rate limits to the first forwarded client IP', async () => {
+test('Render proxy mode uses the edge-overwritten client IP header', async () => {
   const { service } = setup();
-  const app = createApp({ service, perMinute: 1, trustProxy: true });
-  const first = await request(app).get('/api/character?name=검증').set('X-Forwarded-For', '1.2.3.4, 10.0.0.1');
-  const second = await request(app).get('/api/character?name=검증').set('X-Forwarded-For', '5.6.7.8, 10.0.0.1');
-  const limited = await request(app).get('/api/character?name=검증').set('X-Forwarded-For', '1.2.3.4, 10.0.0.1');
+  const app = createApp({ service, perMinute: 1, clientIpHeader: 'cf-connecting-ip' });
+  const first = await request(app).get('/api/character?name=검증').set('CF-Connecting-IP', '10.0.0.1').set('X-Forwarded-For', 'spoofed-a');
+  const sameClientSpoofedAgain = await request(app).get('/api/character?name=검증').set('CF-Connecting-IP', '10.0.0.1').set('X-Forwarded-For', 'spoofed-b');
+  const otherClient = await request(app).get('/api/character?name=검증').set('CF-Connecting-IP', '10.0.0.2').set('X-Forwarded-For', 'spoofed-a');
   assert.equal(first.status, 200);
-  assert.equal(second.status, 200);
+  assert.equal(sameClientSpoofedAgain.status, 429);
+  assert.equal(otherClient.status, 200);
+});
+test('invalid trusted client IP headers fall back to the socket address', async () => {
+  const { service } = setup();
+  const app = createApp({ service, perMinute: 1, clientIpHeader: 'cf-connecting-ip' });
+  await request(app).get('/api/character?name=검증').set('CF-Connecting-IP', 'not-an-ip').set('X-Forwarded-For', '1.2.3.4');
+  const limited = await request(app).get('/api/character?name=검증').set('CF-Connecting-IP', 'not-an-ip').set('X-Forwarded-For', '5.6.7.8');
   assert.equal(limited.status, 429);
 });
 test('invalid request limit configuration is rejected before calling upstream', () => {

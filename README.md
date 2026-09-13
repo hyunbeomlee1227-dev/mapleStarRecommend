@@ -41,9 +41,13 @@ API 키는 Docker 이미지에 넣지 말고 배포 플랫폼의 비밀 환경 �
 
 루트의 `render.yaml`은 Singapore 리전의 단일 무료 Docker 웹 서비스를 정의합니다. 무료 서비스에는 [Render 영구 디스크](https://render.com/docs/disks)를 연결할 수 없으므로 `.runtime`의 NEXON API 사용량 기록은 재시작이나 재배포 시 초기화될 수 있습니다. NEXON 자체 호출 한도는 계속 적용되며, 한도 초과 시 서비스가 안전한 오류를 표시합니다.
 
+현재 공개 서비스: [maple-star-recommend.onrender.com](https://maple-star-recommend.onrender.com)
+
 1. Render Dashboard에서 **New > Blueprint**를 선택하고 이 GitHub 저장소를 연결합니다.
-2. Blueprint 생성 화면에서 `NEXON_API_KEY`에 과거에 노출되지 않은 새 키를 입력합니다.
+2. Blueprint 생성 화면에서 `NEXON_API_KEY`를 Render 비밀 환경 변수로 입력합니다. 저장소나 이미지에는 값을 기록하지 않습니다.
 3. 모든 리소스가 무료 플랜인지 확인한 뒤 Blueprint를 적용합니다. 유료 플랜이나 디스크를 추가하지 마세요.
 4. 배포된 `onrender.com` 주소의 `/healthz`가 `{"status":"ok"}`를 반환하는지 확인합니다.
 
-Blueprint는 `main` 브랜치의 GitHub Actions 검사가 통과한 커밋만 자동 배포합니다. Render의 관리형 프록시에서는 `TRUST_PROXY_MODE=render`를 사용해 `X-Forwarded-For`의 첫 주소를 요청 제한 기준으로 사용합니다. 다른 호스팅 환경에는 이 값을 설정하지 마세요.
+Blueprint는 `main` 브랜치의 GitHub Actions 검사가 통과한 커밋만 자동 배포합니다. Render에서는 `TRUST_PROXY_MODE=render`를 사용해 Cloudflare가 호출자 값을 덮어쓰는 `CF-Connecting-IP`를 요청 제한 기준으로 사용하며, 위조 가능한 `X-Forwarded-For`는 신뢰하지 않습니다. 다른 호스팅 환경에는 이 값을 설정하지 마세요.
+
+배포 상태 확인, 장애 구분, 롤백과 키 교체 방법은 [Render 운영 절차](docs/render-operations.md)를 참고하세요.

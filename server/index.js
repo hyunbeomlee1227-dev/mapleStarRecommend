@@ -15,10 +15,10 @@ function integer(name, fallback, minimum = 1) {
   if (!Number.isSafeInteger(number) || number < minimum) throw new Error(`Invalid configuration: ${name}`);
   return number;
 }
-function trustProxy() {
+function networkSettings() {
   const mode = process.env.TRUST_PROXY_MODE?.trim();
-  if (!mode) return integer('TRUST_PROXY_HOPS', 0, 0) || false;
-  if (mode === 'render') return true;
+  if (!mode) return { trustProxy: integer('TRUST_PROXY_HOPS', 0, 0) || false };
+  if (mode === 'render') return { clientIpHeader: 'cf-connecting-ip' };
   throw new Error('Invalid configuration: TRUST_PROXY_MODE');
 }
 const service = createNexonService({
@@ -32,7 +32,7 @@ const rules = await loadUpgradeRules();
 const equipmentTargets = await loadEquipmentTargets();
 const equipmentBaselines = await loadEquipmentBaselines();
 const potentialOptions = createPotentialOptionsService();
-const app = createApp({ service, potentialOptions, goals, rules, equipmentTargets, equipmentBaselines, perMinute: integer('LOOKUP_LIMIT_PER_MINUTE', 12), potentialOptionsPerMinute: integer('POTENTIAL_OPTIONS_LIMIT_PER_MINUTE', 30), trustProxy: trustProxy() });
+const app = createApp({ service, potentialOptions, goals, rules, equipmentTargets, equipmentBaselines, perMinute: integer('LOOKUP_LIMIT_PER_MINUTE', 12), potentialOptionsPerMinute: integer('POTENTIAL_OPTIONS_LIMIT_PER_MINUTE', 30), ...networkSettings() });
 const server = createServer(app);
 let vite;
 if (production) {
