@@ -134,7 +134,7 @@ test('potential target endpoint combines lower-tier progression and target optio
   };
   const app = createApp({ service: { configured: false, lookup() {} }, potentialOptions, rules });
   const body = {
-    type: 'regular', grade: 'unique', targetGrade: 'legendary', part: 'gloves', level: 200,
+    type: 'regular', grade: 'unique', targetGrade: 'legendary', part: 'gloves', level: 200, tierRemainingAttempts: { unique: 8 },
     targetOptions: ['크리티컬 데미지 +8%'], minimumMatches: 2,
     currentOptions: ['STR +12%', 'STR +9%', '올스탯 +6%'],
   };
@@ -142,17 +142,22 @@ test('potential target endpoint combines lower-tier progression and target optio
   const response = await request(app).post('/api/rules/potential-target-probability').send(body);
   assert.equal(response.status, 200);
   assert.equal(response.body.probability, 0.25);
-  assert.equal(response.body.expectedResets, (1 / 0.014) + 3);
+  const tierExpectedResets = (1 - (1 - 0.014) ** 8) / 0.014;
+  assert.equal(response.body.expectedResets, tierExpectedResets + 3);
   assert.equal(response.body.resetCost, 45_000_000);
-  assert.equal(response.body.expectedMeso, Math.round((1 / 0.014) * 38_250_000 + 3 * 45_000_000));
+  assert.equal(response.body.expectedMeso, Math.round(tierExpectedResets * 38_250_000 + 3 * 45_000_000));
   assert.equal(response.body.currentGrade, 'unique');
   assert.equal(response.body.targetGrade, 'legendary');
   assert.equal(response.body.tierSteps.length, 1);
-  assert.equal(response.body.guaranteeApplied, false);
+  assert.equal(response.body.guaranteeApplied, true);
 
   const invalid = await request(app).post('/api/rules/potential-target-probability').send({ ...body, grade: 'legendary', targetGrade: 'unique' });
   assert.equal(invalid.status, 400);
   assert.equal(invalid.body.code, 'INVALID_POTENTIAL_TARGET_INPUT');
+
+  const excessiveCounter = await request(app).post('/api/rules/potential-target-probability').send({ ...body, tierRemainingAttempts: { unique: 108 } });
+  assert.equal(excessiveCounter.status, 400);
+  assert.equal(excessiveCounter.body.code, 'INVALID_POTENTIAL_TARGET_INPUT');
 });
 
 test('potential target lookup uses the requested target grade table', async () => {

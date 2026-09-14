@@ -1,5 +1,5 @@
 {
-  "version": "2026-09-14-v8",
+  "version": "2026-09-14-v9",
   "updatedAt": "2026-09-14",
   "capabilities": {
     "potentialResetCost": {
@@ -20,7 +20,7 @@
       "label": "잠재 목표 옵션 확률",
       "status": "partial",
       "usableForRecommendation": false,
-      "message": "현재 등급부터 선택한 목표 등급까지의 등급 상승과 공식 목표 옵션 확률을 결합합니다. 월드 공유 보장 누적 횟수는 아직 반영하지 않습니다.",
+      "message": "현재 등급부터 선택한 목표 등급까지의 등급 상승과 공식 목표 옵션 확률을 결합하며, 사용자가 게임에서 확인한 등급별 보장까지 남은 횟수를 반영합니다.",
       "sources": ["https://maplestory.nexon.com/Guide/OtherProbability/cube/black", "https://maplestory.nexon.com/Guide/OtherProbability/cube/addi"]
     },
     "starforceExpectedCost": {
@@ -54,14 +54,14 @@
   },
   "potentialTierUpgrades": {
     "regular": {
-      "rare": { "nextGrade": "epic", "successProbability": 0.150000001275, "guaranteeFailures": 10 },
-      "epic": { "nextGrade": "unique", "successProbability": 0.035, "guaranteeFailures": 42 },
-      "unique": { "nextGrade": "legendary", "successProbability": 0.014, "guaranteeFailures": 107 }
+      "rare": { "nextGrade": "epic", "successProbability": 0.150000001275, "guaranteeAttempts": 10 },
+      "epic": { "nextGrade": "unique", "successProbability": 0.035, "guaranteeAttempts": 42 },
+      "unique": { "nextGrade": "legendary", "successProbability": 0.014, "guaranteeAttempts": 107 }
     },
     "additional": {
-      "rare": { "nextGrade": "epic", "successProbability": 0.02381, "guaranteeFailures": 62 },
-      "epic": { "nextGrade": "unique", "successProbability": 0.009804, "guaranteeFailures": 152 },
-      "unique": { "nextGrade": "legendary", "successProbability": 0.007, "guaranteeFailures": 214 }
+      "rare": { "nextGrade": "epic", "successProbability": 0.02381, "guaranteeAttempts": 62 },
+      "epic": { "nextGrade": "unique", "successProbability": 0.009804, "guaranteeAttempts": 152 },
+      "unique": { "nextGrade": "legendary", "successProbability": 0.007, "guaranteeAttempts": 214 }
     }
   },
   "starforceOutcomes": {

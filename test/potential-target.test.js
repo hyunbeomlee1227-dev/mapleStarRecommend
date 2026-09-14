@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { calculatePotentialProgression, calculatePotentialTargetProbability } from '../server/potential-target.js';
+import { calculatePotentialProgression, calculatePotentialTargetProbability, expectedAttemptsWithGuarantee } from '../server/potential-target.js';
 
 const usefulSkill = '<쓸만한 윈드 부스터> 스킬 사용 가능';
 const stat = 'STR +12%';
@@ -99,18 +99,19 @@ test('unknown current options are rejected instead of skipping identical-result 
 test('potential progression includes tier-up costs without charging the arrival roll twice', () => {
   const result = calculatePotentialProgression({
     type: 'regular', currentGrade: 'unique', targetGrade: 'legendary', targetExpectedResets: 4,
-    costs: { unique: 38_250_000, legendary: 45_000_000 },
-    tierRules: { unique: { nextGrade: 'legendary', successProbability: 0.014, guaranteeFailures: 107 } },
+    costs: { unique: 38_250_000, legendary: 45_000_000 }, tierRemainingAttempts: { unique: 8 },
+    tierRules: { unique: { nextGrade: 'legendary', successProbability: 0.014, guaranteeAttempts: 107 } },
   });
 
-  assert.equal(result.expectedResets, (1 / 0.014) + 3);
-  assert.equal(result.expectedMeso, Math.round((1 / 0.014) * 38_250_000 + 3 * 45_000_000));
+  const tierExpectedResets = expectedAttemptsWithGuarantee({ successProbability: 0.014, guaranteeAttempts: 107, remainingAttempts: 8 });
+  assert.equal(result.expectedResets, tierExpectedResets + 3);
+  assert.equal(result.expectedMeso, Math.round(tierExpectedResets * 38_250_000 + 3 * 45_000_000));
   assert.deepEqual(result.tierSteps, [{
     currentGrade: 'unique', nextGrade: 'legendary', successProbability: 0.014,
-    expectedResets: 1 / 0.014, resetCost: 38_250_000,
-    expectedMeso: Math.round((1 / 0.014) * 38_250_000), guaranteeFailures: 107,
+    expectedResets: tierExpectedResets, resetCost: 38_250_000,
+    expectedMeso: Math.round(tierExpectedResets * 38_250_000), guaranteeAttempts: 107, remainingAttempts: 8,
   }]);
-  assert.equal(result.guaranteeApplied, false);
+  assert.equal(result.guaranteeApplied, true);
 });
 
 test('potential progression rejects incomplete grade paths instead of inventing costs', () => {
@@ -118,4 +119,14 @@ test('potential progression rejects incomplete grade paths instead of inventing 
     type: 'regular', currentGrade: 'epic', targetGrade: 'legendary', targetExpectedResets: 2,
     costs: { epic: 18_000_000, legendary: 45_000_000 }, tierRules: {},
   }), /등급 상승 규칙/);
+});
+
+test('guarantee expectation caps geometric failures at the in-game remaining count', () => {
+  assert.equal(expectedAttemptsWithGuarantee({ successProbability: 0.5, guaranteeAttempts: 3, remainingAttempts: 3 }), 1.75);
+  assert.equal(expectedAttemptsWithGuarantee({ successProbability: 0.5, guaranteeAttempts: 3, remainingAttempts: 2 }), 1.5);
+  assert.equal(expectedAttemptsWithGuarantee({ successProbability: 0.5, guaranteeAttempts: 3, remainingAttempts: 1 }), 1);
+  assert.throws(
+    () => expectedAttemptsWithGuarantee({ successProbability: 0.5, guaranteeAttempts: 3, remainingAttempts: 4 }),
+    /남은 횟수/,
+  );
 });

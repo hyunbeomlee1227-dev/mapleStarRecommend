@@ -173,7 +173,7 @@ test('recommendation endpoint validates input and returns selected goal context'
     nextGrade: 'legendary',
     resetCost: 38_250_000,
     successProbability: 0.014,
-    guaranteeFailures: 107,
+    guaranteeAttempts: 107,
   });
   assert.equal(response.body.supportedCalculations.potentialTierUpgrades.length, 2);
   assert.deepEqual(response.body.supportedCalculations.starforceRisks[0], {

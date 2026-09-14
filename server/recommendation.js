@@ -74,7 +74,7 @@ function potentialTierUpgrades(items, rules) {
         nextGrade: tier.nextGrade,
         resetCost: band.costs[currentGrade],
         successProbability: tier.successProbability,
-        guaranteeFailures: tier.guaranteeFailures,
+        guaranteeAttempts: tier.guaranteeAttempts,
       }];
     });
   });

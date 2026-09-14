@@ -37,7 +37,7 @@ const bandsSchema = z.array(bandSchema).min(1).superRefine((bands, context) => {
 const tierRuleSchema = z.object({
   nextGrade: z.enum(['epic', 'unique', 'legendary']),
   successProbability: z.number().positive().max(1),
-  guaranteeFailures: z.number().int().positive(),
+  guaranteeAttempts: z.number().int().positive(),
 });
 const tierRulesSchema = z.object({
   rare: tierRuleSchema.extend({ nextGrade: z.literal('epic') }),

@@ -72,7 +72,7 @@ test('equipment browsing, filters, detail and status remain usable', async ({ pa
   await expect(gloveStarforce).toContainText('4,005,000,000 메소');
   await expect(page.getByText('강화 규칙 2/5 검증')).toBeVisible();
   await page.getByText('강화 규칙 2/5 검증').click();
-  await expect(page.getByText('2026-09-14-v8 · 2026-09-14')).toBeVisible();
+  await expect(page.getByText('2026-09-14-v9 · 2026-09-14')).toBeVisible();
   await expect(page.getByText('잠재 재설정 비용', { exact: true })).toBeVisible();
   await expect(page.getByText('스타포스 기대 비용', { exact: true })).toBeVisible();
   await expect(page.getByText('순위 계산 대기', { exact: true })).toBeVisible();
@@ -142,6 +142,10 @@ test('selected equipment can load official regular and additional potential opti
         [{ option: '공격력 +12%', probability: 0.02 }],
         [{ option: '몬스터 방어율 무시 +40%', probability: 0.005 }],
       ],
+      tierRules: {
+        epic: { nextGrade: 'unique', successProbability: 0.009804, guaranteeAttempts: 152 },
+        unique: { nextGrade: 'legendary', successProbability: 0.007, guaranteeAttempts: 214 },
+      },
     } });
   });
   await page.route('**/api/rules/potential-target-probability', async (route) => {
@@ -149,11 +153,12 @@ test('selected equipment can load official regular and additional potential opti
     const body = route.request().postDataJSON();
     expect(body.targetOptions).toEqual(['보스 몬스터 공격 시 데미지 +40%']);
     expect(body.minimumMatches).toBe(1);
+    if (targetRequestCount === 3) expect(body.tierRemainingAttempts).toEqual({ unique: 52 });
     if (targetRequestCount === 2) await delayedTarget;
     try {
       await route.fulfill({ json: {
         probability: 0.1, expectedResets: 10, resetCost: 45_000_000, expectedMeso: 450_000_000,
-        currentResultProbability: 0.0001, conditionedOnDifferentResult: true, alreadySatisfied: false,
+        currentResultProbability: 0.0001, conditionedOnDifferentResult: true, alreadySatisfied: false, guaranteeApplied: true,
       } });
     } finally {
       if (targetRequestCount === 2) finishDelayedTarget();
@@ -182,7 +187,13 @@ test('selected equipment can load official regular and additional potential opti
   await expect(page.getByRole('group', { name: '조회 및 목표 등급' })).toBeVisible();
   await page.getByRole('button', { name: '레전드리', exact: true }).click();
   await expect.poll(() => requests).toEqual(['regular', 'additional', 'additional']);
-  await expect(page.getByText('보장 누적 횟수는 반영하지 않습니다.', { exact: false })).toBeVisible();
+  await page.getByLabel('유니크에서 레전드리 보장까지 남은 횟수').fill('52');
+  await page.getByRole('checkbox', { name: '보스 몬스터 공격 시 데미지 +40%' }).check();
+  await page.getByRole('button', { name: '목표 확률 계산' }).click();
+  await expect.poll(() => targetRequestCount).toBe(3);
+  await expect(page.getByText('입력한 월드 공유 보장까지 남은 횟수를 반영합니다.', { exact: false })).toBeVisible();
+  await page.screenshot({ path: `test-results/potential-guarantee-${info.project.name}.png`, fullPage: true });
+  expect(await page.getByRole('dialog', { name: '공식 잠재 옵션표' }).evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
   await page.getByLabel('공식 잠재 옵션표 닫기').click();
   if (info.project.name === 'mobile') await expect(page.getByLabel('장비 상세 닫기')).toBeVisible();
 });

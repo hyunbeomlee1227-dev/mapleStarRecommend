@@ -29,7 +29,15 @@ export function StarforceView({ risks }) {
 }
 
 export function PotentialView({ items, tierCandidates }) {
-  return <div className="analysis-view"><div className="view-heading"><div><span className="eyebrow">POTENTIAL</span><h3>잠재능력 강화</h3></div><span>{tierCandidates.length}개 등급 상승 계산 가능</span></div><div className="potential-overview">{items.map((item, index) => <section key={`${item.item_equipment_slot}-${index}`}><header><strong>{item.item_name}</strong><span>{item.item_equipment_slot}</span></header><div><Badge grade={item.potential_option_grade} /><OptionSummary item={item} /></div><div><Badge grade={item.additional_potential_option_grade} /><OptionSummary item={item} additional /></div></section>)}</div>{tierCandidates.length > 0 && <><h4 className="subsection-title">등급 상승 참고</h4><div className="tier-table"><div className="tier-head"><span>장비</span><span>구분</span><span>등급</span><span>1회 비용</span><span>상승 확률</span><span>보장 기준</span></div>{tierCandidates.map((candidate, index) => <div className="tier-row" key={`${candidate.slot}-${candidate.potentialType}-${index}`}><strong>{candidate.itemName}<small>Lv. {candidate.equipmentLevel}</small></strong><span>{candidate.potentialType === 'regular' ? '일반' : '에디셔널'}</span><span>{gradeNames[candidate.currentGrade]} → {gradeNames[candidate.nextGrade]}</span><span>{mesos.format(candidate.resetCost)} 메소</span><span>{(candidate.successProbability * 100).toFixed(4).replace(/\.0+$/, '')}%</span><span>{candidate.guaranteeFailures}회 실패</span></div>)}</div></>}<p className="calculation-note">목표 옵션 조합과 현재 보장 누적 횟수는 아직 반영하지 않습니다. 장비 상세에서 넥슨 공식 줄별 옵션표를 확인할 수 있습니다.</p></div>;
+  return <div className="analysis-view">
+    <div className="view-heading"><div><span className="eyebrow">POTENTIAL</span><h3>잠재능력 강화</h3></div><span>{tierCandidates.length}개 등급 상승 계산 가능</span></div>
+    <div className="potential-overview">{items.map((item, index) => <section key={`${item.item_equipment_slot}-${index}`}><header><strong>{item.item_name}</strong><span>{item.item_equipment_slot}</span></header><div><Badge grade={item.potential_option_grade} /><OptionSummary item={item} /></div><div><Badge grade={item.additional_potential_option_grade} /><OptionSummary item={item} additional /></div></section>)}</div>
+    {tierCandidates.length > 0 && <>
+      <h4 className="subsection-title">등급 상승 참고</h4>
+      <div className="tier-table"><div className="tier-head"><span>장비</span><span>구분</span><span>등급</span><span>1회 비용</span><span>상승 확률</span><span>보장 기준</span></div>{tierCandidates.map((candidate, index) => <div className="tier-row" key={`${candidate.slot}-${candidate.potentialType}-${index}`}><strong>{candidate.itemName}<small>Lv. {candidate.equipmentLevel}</small></strong><span>{candidate.potentialType === 'regular' ? '일반' : '에디셔널'}</span><span>{gradeNames[candidate.currentGrade]} → {gradeNames[candidate.nextGrade]}</span><span>{mesos.format(candidate.resetCost)} 메소</span><span>{(candidate.successProbability * 100).toFixed(4).replace(/\.0+$/, '')}%</span><span>{candidate.guaranteeAttempts}회 이내</span></div>)}</div>
+    </>}
+    <p className="calculation-note">이 참고표는 보장까지 남은 횟수를 반영하지 않습니다. 장비 상세의 공식 옵션표에서 게임에 표시된 남은 횟수와 목표 옵션을 입력하면 함께 계산할 수 있습니다.</p>
+  </div>;
 }
 
 export function SetsView({ sets }) {

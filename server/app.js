@@ -49,7 +49,10 @@ export function createApp({ service, potentialOptions = null, goals = { goals: [
     if (!parsed.success) return res.status(400).json({ code: 'INVALID_POTENTIAL_OPTION_INPUT', message: parsed.error.issues[0]?.message || '잠재 옵션 검색 조건을 확인해 주세요.' });
     if (!potentialOptions) return res.status(503).json({ code: 'POTENTIAL_OPTIONS_UNAVAILABLE', message: '공식 잠재 옵션 조회가 준비되지 않았습니다.' });
     if (!reservePotentialLookup(req, res)) return;
-    try { return res.json(await potentialOptions.lookup(parsed.data)); }
+    try {
+      const result = await potentialOptions.lookup(parsed.data);
+      return res.json({ ...result, tierRules: rules.potentialTierUpgrades?.[parsed.data.type] ?? {} });
+    }
     catch (error) {
       if (error instanceof PotentialOptionsError) return res.status(error.status).json({ code: error.code, message: error.message });
       return res.status(502).json({ code: 'OFFICIAL_SOURCE_UNAVAILABLE', message: '공식 잠재 옵션 정보를 불러오지 못했습니다.' });
@@ -70,6 +73,12 @@ export function createApp({ service, potentialOptions = null, goals = { goals: [
     const parsed = potentialTargetProbabilitySchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ code: 'INVALID_POTENTIAL_TARGET_INPUT', message: parsed.error.issues[0]?.message || '잠재 목표 조건을 확인해 주세요.' });
     if (!potentialOptions) return res.status(503).json({ code: 'POTENTIAL_OPTIONS_UNAVAILABLE', message: '공식 잠재 옵션 조회가 준비되지 않았습니다.' });
+    for (const [grade, remainingAttempts] of Object.entries(parsed.data.tierRemainingAttempts)) {
+      const limit = rules.potentialTierUpgrades?.[parsed.data.type]?.[grade]?.guaranteeAttempts;
+      if (!Number.isInteger(limit) || remainingAttempts > limit) {
+        return res.status(400).json({ code: 'INVALID_POTENTIAL_TARGET_INPUT', message: '보장까지 남은 횟수가 해당 등급의 보장 기준을 초과했습니다.' });
+      }
+    }
     if (!reservePotentialLookup(req, res)) return;
     const band = rules.potentialResetCosts?.[parsed.data.type]?.find(({ minLevel, maxLevel }) => parsed.data.level >= minLevel && parsed.data.level <= maxLevel);
     const resetCost = band?.costs?.[parsed.data.targetGrade];
@@ -82,6 +91,7 @@ export function createApp({ service, potentialOptions = null, goals = { goals: [
         targetExpectedResets: result.expectedResets,
         costs: band.costs,
         tierRules: rules.potentialTierUpgrades?.[parsed.data.type],
+        tierRemainingAttempts: parsed.data.tierRemainingAttempts,
       });
       return res.json({
         ...result,

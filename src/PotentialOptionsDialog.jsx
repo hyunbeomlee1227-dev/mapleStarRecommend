@@ -37,6 +37,7 @@ export default function PotentialOptionsDialog({ item, open, onClose }) {
   const [result, setResult] = useState({ status: 'idle' });
   const [targetOptions, setTargetOptions] = useState([]);
   const [minimumMatches, setMinimumMatches] = useState(1);
+  const [tierRemainingAttempts, setTierRemainingAttempts] = useState({});
   const [calculation, setCalculation] = useState({ status: 'idle' });
   const regularAvailable = Boolean(potentialQueryFor(item, 'regular'));
   const additionalAvailable = Boolean(potentialQueryFor(item, 'additional'));
@@ -46,6 +47,7 @@ export default function PotentialOptionsDialog({ item, open, onClose }) {
     const initialType = regularAvailable ? 'regular' : 'additional';
     setType(initialType);
     setSelectedTargetGrade(null);
+    setTierRemainingAttempts({});
     dialogRef.current?.showModal();
   }, [open, item, regularAvailable]);
 
@@ -98,6 +100,10 @@ export default function PotentialOptionsDialog({ item, open, onClose }) {
           targetGrade: query.grade,
           targetOptions,
           minimumMatches,
+          tierRemainingAttempts: Object.fromEntries(progressionGrades.map((grade) => [
+            grade,
+            Number(tierRemainingAttempts[grade] ?? result.body.tierRules[grade].guaranteeAttempts),
+          ])),
           currentOptions: currentQuery.grade === query.grade ? currentPotentialOptions(item, type) ?? undefined : undefined,
         }),
       });
@@ -115,10 +121,19 @@ export default function PotentialOptionsDialog({ item, open, onClose }) {
   const currentGrade = potentialQueryFor(item, type)?.grade;
   const selectedGrade = selectedTargetGrade ?? currentGrade;
   const availableGrades = currentGrade ? potentialGradeOrder.slice(potentialGradeOrder.indexOf(currentGrade)) : [];
+  const progressionGrades = currentGrade && selectedGrade
+    ? potentialGradeOrder.slice(potentialGradeOrder.indexOf(currentGrade), potentialGradeOrder.indexOf(selectedGrade))
+    : [];
+  const tierInputsValid = progressionGrades.every((grade) => {
+    const value = Number(tierRemainingAttempts[grade] ?? result.body?.tierRules?.[grade]?.guaranteeAttempts);
+    const maximum = result.body?.tierRules?.[grade]?.guaranteeAttempts;
+    return Number.isInteger(value) && value >= 1 && value <= maximum;
+  });
 
   function switchType(nextType) {
     setType(nextType);
     setSelectedTargetGrade(null);
+    setTierRemainingAttempts({});
   }
 
   return <dialog ref={dialogRef} aria-labelledby="potential-options-title" onClose={onClose} className="potential-options-dialog">
@@ -126,7 +141,22 @@ export default function PotentialOptionsDialog({ item, open, onClose }) {
     <div className="potential-toolbar"><div className="mode-control potential-type" role="group" aria-label="잠재 종류"><button disabled={!regularAvailable} className={type === 'regular' ? 'active' : ''} aria-pressed={type === 'regular'} onClick={() => switchType('regular')}>일반</button><button disabled={!additionalAvailable} className={type === 'additional' ? 'active' : ''} aria-pressed={type === 'additional'} onClick={() => switchType('additional')}>에디셔널</button></div>{availableGrades.length > 1 && <div className="mode-control potential-grade" role="group" aria-label="조회 및 목표 등급">{availableGrades.map((grade) => <button key={grade} className={selectedGrade === grade ? 'active' : ''} aria-pressed={selectedGrade === grade} onClick={() => setSelectedTargetGrade(grade)}>{potentialGradeLabels[grade]}</button>)}</div>}</div>
     {result.status === 'loading' && <div className="potential-loading"><LoaderCircle className="spin" />공식 확률표를 불러오는 중입니다.</div>}
     {result.status === 'error' && <div className="potential-error" role="alert">{result.message}</div>}
-    {result.status === 'ready' && <><div className="potential-meta"><strong>{item.item_name}</strong><span>{result.body.part} · {result.body.grade} · Lv. {result.body.levelBand}</span>{result.body.cached && <small>캐시됨</small>}</div><div className="potential-lines">{result.body.lines.map((line, index) => <section key={index}><h3>{index + 1}번째 옵션</h3><div>{line.map((entry) => <p key={`${entry.option}-${entry.probability}`}><span>{entry.option}</span><strong>{(entry.probability * 100).toFixed(6).replace(/0+$/, '').replace(/\.$/, '')}%</strong></p>)}</div></section>)}</div><section className="potential-target-builder" aria-label="잠재 목표 확률 계산"><div className="potential-target-heading"><div><span className="eyebrow">TARGET OPTIONS</span><h3>{potentialGradeLabels[selectedGrade]} 목표 옵션 확률</h3></div><div className="mode-control" role="group" aria-label="최소 일치 줄 수">{[1, 2, 3].map((count) => <button key={count} className={minimumMatches === count ? 'active' : ''} aria-pressed={minimumMatches === count} onClick={() => { setMinimumMatches(count); setCalculation({ status: 'idle' }); }}>{count}줄 이상</button>)}</div></div><div className="potential-target-options">{availableOptions.map((option) => <label key={option}><input type="checkbox" checked={targetOptions.includes(option)} onChange={() => toggleTarget(option)} /><span>{option}</span></label>)}</div><button className="potential-calculate" disabled={targetOptions.length === 0 || calculation.status === 'loading'} onClick={calculateTarget}>{calculation.status === 'loading' ? <LoaderCircle className="spin" /> : <Target />}목표 확률 계산</button>{calculation.status === 'error' && <div className="potential-error" role="alert">{calculation.message}</div>}{calculation.status === 'ready' && <div className="potential-target-result" aria-label="잠재 목표 계산 결과"><p><span>{calculation.body.alreadySatisfied ? '현재 상태' : '목표 등급 1회 확률'}</span><strong>{calculation.body.alreadySatisfied ? '목표 달성' : percent(calculation.body.probability)}</strong></p><p><span>총 평균 재설정</span><strong>{calculation.body.expectedResets === null ? '달성 불가' : `${calculation.body.expectedResets.toFixed(2)}회`}</strong></p><p><span>총 기대 메소</span><strong>{calculation.body.expectedMeso === null ? '계산 불가' : `${mesos.format(calculation.body.expectedMeso)} 메소`}</strong></p></div>}</section><a className="official-link" href={result.body.sourceUrl} target="_blank" rel="noreferrer">넥슨 공식 확률표 <ArrowUpRight size={13} /></a></>}
-    <p className="calculation-note">등급 상승과 목표 등급의 줄별 표기 확률을 합산합니다. 최대 등장 횟수 제한과 현재 등급에서 완전히 동일한 결과의 재추첨을 반영하며, 보장 누적 횟수는 반영하지 않습니다.</p>
+    {result.status === 'ready' && <>
+      <div className="potential-meta"><strong>{item.item_name}</strong><span>{result.body.part} · {result.body.grade} · Lv. {result.body.levelBand}</span>{result.body.cached && <small>캐시됨</small>}</div>
+      <div className="potential-lines">{result.body.lines.map((line, index) => <section key={index}><h3>{index + 1}번째 옵션</h3><div>{line.map((entry) => <p key={`${entry.option}-${entry.probability}`}><span>{entry.option}</span><strong>{(entry.probability * 100).toFixed(6).replace(/0+$/, '').replace(/\.$/, '')}%</strong></p>)}</div></section>)}</div>
+      <section className="potential-target-builder" aria-label="잠재 목표 확률 계산">
+        <div className="potential-target-heading"><div><span className="eyebrow">TARGET OPTIONS</span><h3>{potentialGradeLabels[selectedGrade]} 목표 옵션 확률</h3></div><div className="mode-control" role="group" aria-label="최소 일치 줄 수">{[1, 2, 3].map((count) => <button key={count} className={minimumMatches === count ? 'active' : ''} aria-pressed={minimumMatches === count} onClick={() => { setMinimumMatches(count); setCalculation({ status: 'idle' }); }}>{count}줄 이상</button>)}</div></div>
+        {progressionGrades.length > 0 && <div className="potential-guarantee-inputs"><h4>등급 상승 보장</h4>{progressionGrades.map((grade) => {
+          const rule = result.body.tierRules?.[grade];
+          return rule && <label key={grade}><span>{potentialGradeLabels[grade]}에서 {potentialGradeLabels[rule.nextGrade]} 보장까지 남은 횟수<small>게임 내 퀘스트 알림이에서 확인 · 최대 {rule.guaranteeAttempts}회</small></span><input type="number" min="1" max={rule.guaranteeAttempts} step="1" value={tierRemainingAttempts[grade] ?? rule.guaranteeAttempts} aria-label={`${potentialGradeLabels[grade]}에서 ${potentialGradeLabels[rule.nextGrade]} 보장까지 남은 횟수`} onChange={(event) => { setTierRemainingAttempts((counts) => ({ ...counts, [grade]: event.target.value })); setCalculation({ status: 'idle' }); }} /></label>;
+        })}</div>}
+        <div className="potential-target-options">{availableOptions.map((option) => <label key={option}><input type="checkbox" checked={targetOptions.includes(option)} onChange={() => toggleTarget(option)} /><span>{option}</span></label>)}</div>
+        <button className="potential-calculate" disabled={targetOptions.length === 0 || !tierInputsValid || calculation.status === 'loading'} onClick={calculateTarget}>{calculation.status === 'loading' ? <LoaderCircle className="spin" /> : <Target />}목표 확률 계산</button>
+        {calculation.status === 'error' && <div className="potential-error" role="alert">{calculation.message}</div>}
+        {calculation.status === 'ready' && <div className="potential-target-result" aria-label="잠재 목표 계산 결과"><p><span>{calculation.body.alreadySatisfied ? '현재 상태' : '목표 등급 1회 확률'}</span><strong>{calculation.body.alreadySatisfied ? '목표 달성' : percent(calculation.body.probability)}</strong></p><p><span>총 평균 재설정</span><strong>{calculation.body.expectedResets === null ? '달성 불가' : `${calculation.body.expectedResets.toFixed(2)}회`}</strong></p><p><span>총 기대 메소</span><strong>{calculation.body.expectedMeso === null ? '계산 불가' : `${mesos.format(calculation.body.expectedMeso)} 메소`}</strong></p></div>}
+      </section>
+      <a className="official-link" href={result.body.sourceUrl} target="_blank" rel="noreferrer">넥슨 공식 확률표 <ArrowUpRight size={13} /></a>
+    </>}
+    <p className="calculation-note">등급 상승과 목표 등급의 줄별 표기 확률을 합산합니다. 최대 등장 횟수 제한, 동일 결과 재추첨과 입력한 월드 공유 보장까지 남은 횟수를 반영합니다.</p>
   </dialog>;
 }

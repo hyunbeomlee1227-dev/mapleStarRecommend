@@ -31,6 +31,11 @@ export const potentialLineGradesSchema = potentialOptionsQuerySchema.extend({
 });
 export const potentialTargetProbabilitySchema = potentialOptionsQuerySchema.extend({
   targetGrade: z.enum(potentialGradeOrder).default('legendary'),
+  tierRemainingAttempts: z.object({
+    rare: z.number().int().min(1).max(214).optional(),
+    epic: z.number().int().min(1).max(214).optional(),
+    unique: z.number().int().min(1).max(214).optional(),
+  }).strict().default({}),
   targetOptions: z.array(z.string().min(1).max(500)).min(1).max(30)
     .refine((options) => new Set(options.map(normalizePotentialOption)).size === options.length, '목표 옵션은 중복해서 선택할 수 없습니다.'),
   minimumMatches: z.number().int().min(1).max(3),

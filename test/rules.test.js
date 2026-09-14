@@ -9,7 +9,7 @@ import { createApp } from '../server/app.js';
 
 test('upgrade rule catalog exposes verified costs and blocks incomplete calculations', async () => {
   const rules = await loadUpgradeRules();
-  assert.equal(rules.version, '2026-09-14-v8');
+  assert.equal(rules.version, '2026-09-14-v9');
   assert.equal(rules.capabilities.potentialResetCost.status, 'verified');
   assert.equal(rules.capabilities.potentialTierUpgrade.status, 'verified');
   assert.equal(rules.capabilities.potentialTierUpgrade.usableForRecommendation, true);
@@ -19,7 +19,7 @@ test('upgrade rule catalog exposes verified costs and blocks incomplete calculat
   assert.equal(rules.potentialResetCosts.regular[0].costs.legendary, 40_000_000);
   assert.equal(rules.potentialResetCosts.additional.at(-1).costs.legendary, 98_000_000);
   assert.deepEqual(rules.potentialTierUpgrades.regular.unique, {
-    nextGrade: 'legendary', successProbability: 0.014, guaranteeFailures: 107,
+    nextGrade: 'legendary', successProbability: 0.014, guaranteeAttempts: 107,
   });
   assert.deepEqual(rules.starforceOutcomes['22'], {
     successProbability: 0.1575, maintainProbability: 0.674, destroyProbability: 0.1685,
