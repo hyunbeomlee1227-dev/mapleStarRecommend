@@ -1,3 +1,5 @@
+import { potentialGradeOrder } from '../shared/potential.js';
+
 export function normalizePotentialOption(option) {
   return String(option ?? '').replace(/\s*:\s*/g, ' ').replace(/\s+/g, ' ').trim();
 }
@@ -85,11 +87,9 @@ export function calculatePotentialTargetProbability({ lines, targetOptions, mini
   };
 }
 
-const gradeOrder = ['rare', 'epic', 'unique', 'legendary'];
-
 export function calculatePotentialProgression({ currentGrade, targetGrade, targetExpectedResets, costs, tierRules }) {
-  const currentIndex = gradeOrder.indexOf(currentGrade);
-  const targetIndex = gradeOrder.indexOf(targetGrade);
+  const currentIndex = potentialGradeOrder.indexOf(currentGrade);
+  const targetIndex = potentialGradeOrder.indexOf(targetGrade);
   if (currentIndex < 0 || targetIndex < currentIndex) throw new Error('목표 잠재 등급이 현재 등급보다 낮습니다.');
   if (targetExpectedResets === null) {
     return { expectedResets: null, expectedMeso: null, tierSteps: [], guaranteeApplied: false };
@@ -99,10 +99,10 @@ export function calculatePotentialProgression({ currentGrade, targetGrade, targe
   let expectedResets = 0;
   let expectedMeso = 0;
   for (let index = currentIndex; index < targetIndex; index++) {
-    const grade = gradeOrder[index];
+    const grade = potentialGradeOrder[index];
     const rule = tierRules?.[grade];
     const resetCost = costs?.[grade];
-    if (!rule || rule.nextGrade !== gradeOrder[index + 1] || !resetCost) {
+    if (!rule || rule.nextGrade !== potentialGradeOrder[index + 1] || !resetCost) {
       throw new Error(`${grade} 등급 상승 규칙 또는 비용을 확인할 수 없습니다.`);
     }
     const stepResets = 1 / rule.successProbability;

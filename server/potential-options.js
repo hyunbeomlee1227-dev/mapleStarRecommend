@@ -1,11 +1,11 @@
 import * as cheerio from 'cheerio';
 import { z } from 'zod';
+import { isPotentialGradeAtLeast, potentialGradeLabels, potentialGradeOrder } from '../shared/potential.js';
 import { calculatePotentialTargetProbability, normalizePotentialOption } from './potential-target.js';
 
 const ENDPOINT = 'https://maplestory.nexon.com/Guide/OtherProbability/cube/GetSearchProbList';
 const cubeIds = { regular: '5062010', additional: '5062500' };
 const grades = { rare: '1', epic: '2', unique: '3', legendary: '4' };
-const gradeLabels = { rare: '레어', epic: '에픽', unique: '유니크', legendary: '레전드리' };
 const lowerGrades = { legendary: 'unique', unique: 'epic', epic: 'rare' };
 const parts = {
   weapon: '1', emblem: '2', secondary: '3', forceShield: '4', shield: '5', hat: '6', top: '7', overall: '8', bottom: '9', shoes: '10', gloves: '11', cape: '12', belt: '13', shoulder: '14', face: '15', eye: '16', earrings: '17', ring: '18', pendant: '19', heart: '20',
@@ -22,7 +22,7 @@ function levelBand(level) {
 
 export const potentialOptionsQuerySchema = z.object({
   type: z.enum(Object.keys(cubeIds)),
-  grade: z.enum(Object.keys(grades)),
+  grade: z.enum(potentialGradeOrder),
   part: z.enum(Object.keys(parts)),
   level: z.coerce.number().int().min(0).max(250),
 });
@@ -30,14 +30,13 @@ export const potentialLineGradesSchema = potentialOptionsQuerySchema.extend({
   options: z.array(z.string().min(1).max(500)).min(1).max(3),
 });
 export const potentialTargetProbabilitySchema = potentialOptionsQuerySchema.extend({
-  targetGrade: z.enum(Object.keys(grades)).default('legendary'),
+  targetGrade: z.enum(potentialGradeOrder).default('legendary'),
   targetOptions: z.array(z.string().min(1).max(500)).min(1).max(30)
     .refine((options) => new Set(options.map(normalizePotentialOption)).size === options.length, '목표 옵션은 중복해서 선택할 수 없습니다.'),
   minimumMatches: z.number().int().min(1).max(3),
   currentOptions: z.array(z.string().min(1).max(500)).length(3).optional(),
 }).superRefine((value, context) => {
-  const order = Object.keys(grades);
-  if (order.indexOf(value.targetGrade) < order.indexOf(value.grade)) {
+  if (!isPotentialGradeAtLeast(value.targetGrade, value.grade)) {
     context.addIssue({ code: 'custom', path: ['targetGrade'], message: '목표 잠재 등급은 현재 등급보다 낮을 수 없습니다.' });
   }
 });
@@ -103,7 +102,7 @@ export function createPotentialOptionsService({ fetchImpl = fetch, now = Date.no
     if (!response.ok) throw new PotentialOptionsError('OFFICIAL_SOURCE_UNAVAILABLE', '공식 잠재 옵션 정보 제공처가 응답하지 않습니다.');
     const html = await response.text();
     if (html.length > 512000) throw new PotentialOptionsError('INVALID_OFFICIAL_RESPONSE', '공식 잠재 옵션 응답이 허용 크기를 초과했습니다.');
-    return { ...parsePotentialOptionsHtml(html), grade: gradeLabels[input.grade], part: partLabels[input.part], levelBand: levelBand(input.level), sourceUrl: input.type === 'regular'
+    return { ...parsePotentialOptionsHtml(html), grade: potentialGradeLabels[input.grade], part: partLabels[input.part], levelBand: levelBand(input.level), sourceUrl: input.type === 'regular'
       ? 'https://maplestory.nexon.com/Guide/OtherProbability/cube/black'
       : 'https://maplestory.nexon.com/Guide/OtherProbability/cube/addi', cached: false };
   }
