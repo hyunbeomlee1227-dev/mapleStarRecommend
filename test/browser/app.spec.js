@@ -112,7 +112,8 @@ test('real lookup UI merges cash equipment and keeps it out of upgrade recommend
       items: [...demo.items, {
         item_kind: 'cash', appearance_mode: 'base', item_name: '별빛 모자', item_equipment_slot: '모자', item_equipment_part: '모자',
         item_icon: null, item_description: '캐시 장비 설명', item_gender: '공용', cash_item_label: '스페셜라벨',
-        date_expire: '2026-12-31T00:00+09:00', cash_item_option: [{ option_type: '캐릭터 최대 HP 증가', option_value: '250' }], skills: ['캐시 스킬'],
+        date_expire: '2026-12-31T00:00+09:00', cash_item_option: [{ option_type: '캐릭터 최대 HP 증가', option_value: '250' }],
+        cash_item_coloring_prism: { color_range: '전체', hue: 10, saturation: 20, value: 30 }, skills: ['캐시 스킬'],
       }],
     } });
   });
@@ -132,6 +133,9 @@ test('real lookup UI merges cash equipment and keeps it out of upgrade recommend
   await expect(detail.getByText('2026. 12. 31.', { exact: true })).toBeVisible();
   await expect(detail.getByText('캐릭터 최대 HP 증가', { exact: true })).toBeVisible();
   await expect(detail.getByText('250', { exact: true })).toBeVisible();
+  await expect(detail.getByText('기본 외형', { exact: true })).toBeVisible();
+  await expect(detail.getByText('컬러링 프리즘', { exact: true })).toBeVisible();
+  await expect(detail.getByText('전체 · H10 S20 V30', { exact: true })).toBeVisible();
   await expect(detail.getByRole('button', { name: '공식 잠재 옵션표 보기' })).toHaveCount(0);
   await expect.poll(() => recommendationBodies.at(-1)?.items.some((item) => item.item_name === '별빛 모자')).toBe(false);
   await page.screenshot({ path: `test-results/cash-equipment-${info.project.name}.png`, fullPage: true });

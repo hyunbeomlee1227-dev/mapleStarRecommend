@@ -1,5 +1,13 @@
 const nonStarforceParts = new Set(['보조무기', '엠블렘', '훈장', '뱃지', '포켓 아이템', '칭호']);
 
+export function isCashItem(item) {
+  return item?.item_kind === 'cash';
+}
+
+export function supportsEnhancement(item) {
+  return !isCashItem(item);
+}
+
 export function supportsStarforce(item) {
   const star = Number(item?.starforce);
   if (!Number.isInteger(star) || star < 0 || star > 30) return false;

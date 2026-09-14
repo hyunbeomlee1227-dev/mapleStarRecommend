@@ -64,6 +64,7 @@ test('equipment lookup merges every current cash item and preserves cash metadat
   ]);
   assert.deepEqual(result.body.items[1].cash_item_option, [{ option_type: '캐릭터 최대 HP 증가', option_value: '250' }]);
   assert.equal(result.body.items[1].cash_item_label, '스페셜라벨');
+  assert.deepEqual(result.body.items[1].cash_item_coloring_prism, { color_range: '전체', hue: 10, saturation: 20, value: 30 });
   assert.equal(result.body.items[1].item_icon, 'https://open.api.nexon.com/static/maplestory/item/cash.png');
 });
 
