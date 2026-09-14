@@ -95,7 +95,11 @@ test('boss equipment goals are shown for the selected solo boss range', async ({
   await expect(page.getByText('관리자 기준', { exact: true })).toHaveCount(0);
 });
 
-test('real lookup UI uses server response and recent searches can be deleted', async ({ page }) => {
+test('real lookup UI merges cash equipment and keeps it out of upgrade recommendations', async ({ page }, info) => {
+  const recommendationBodies = [];
+  page.on('request', (request) => {
+    if (request.url().includes('/api/recommendations') && request.method() === 'POST') recommendationBodies.push(request.postDataJSON());
+  });
   await page.route('**/api/character?*', async (route) => {
     const { demo } = await import('../../src/demo.js');
     await route.fulfill({ json: {
@@ -105,6 +109,11 @@ test('real lookup UI uses server response and recent searches can be deleted', a
       preset: 2,
       presetSelection: { status: 'selected', strategy: 'boss-combat-options-v1', excludedPresets: [{ preset: 1, reasons: ['아이템 획득'] }], selectedFarmingReasons: [] },
       character: { ...demo.character, name: '검증캐릭터', image: null },
+      items: [...demo.items, {
+        item_kind: 'cash', appearance_mode: 'base', item_name: '별빛 모자', item_equipment_slot: '모자', item_equipment_part: '모자',
+        item_icon: null, item_description: '캐시 장비 설명', item_gender: '공용', cash_item_label: '스페셜라벨',
+        date_expire: '2026-12-31T00:00+09:00', cash_item_option: [{ option_type: '캐릭터 최대 HP 증가', option_value: '250' }], skills: ['캐시 스킬'],
+      }],
     } });
   });
   await page.goto('/');
@@ -113,6 +122,21 @@ test('real lookup UI uses server response and recent searches can be deleted', a
   await expect(page.locator('.character-identity h2')).toHaveText('검증캐릭터');
   await expect(page.locator('.snapshot')).toContainText('프리셋 2 · 보스 옵션 자동 선택');
   await expect(page.locator('.demo-banner')).toHaveCount(0);
+  await expect(page.getByRole('tab', { name: /^장비/ })).toContainText('12');
+  await page.getByLabel('장비 유형 필터').selectOption('cash');
+  await expect(page.locator('.item-row')).toHaveCount(1);
+  await page.getByRole('button', { name: '별빛 모자 상세 보기' }).click();
+  const detail = info.project.name === 'mobile' ? page.locator('.mobile-detail') : page.locator('.details-panel');
+  await expect(detail.getByRole('heading', { name: '별빛 모자' })).toBeVisible();
+  await expect(detail.getByText('스페셜라벨', { exact: true })).toBeVisible();
+  await expect(detail.getByText('2026. 12. 31.', { exact: true })).toBeVisible();
+  await expect(detail.getByText('캐릭터 최대 HP 증가', { exact: true })).toBeVisible();
+  await expect(detail.getByText('250', { exact: true })).toBeVisible();
+  await expect(detail.getByRole('button', { name: '공식 잠재 옵션표 보기' })).toHaveCount(0);
+  await expect.poll(() => recommendationBodies.at(-1)?.items.some((item) => item.item_name === '별빛 모자')).toBe(false);
+  await page.screenshot({ path: `test-results/cash-equipment-${info.project.name}.png`, fullPage: true });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  if (info.project.name === 'mobile') await page.getByLabel('장비 상세 닫기').click();
   await page.getByLabel('최근 조회 모두 삭제').click();
   await expect(page.locator('.recent')).toHaveCount(0);
 });

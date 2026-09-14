@@ -17,7 +17,8 @@ function setup(raw = responses(), options = {}) {
 test('successful lookup preserves equipment details, caches and coalesces without exposing credentials', async () => {
   const { app, calls } = setup();
   const [first, second] = await Promise.all([request(app).get('/api/character?name=검증캐릭터'), request(app).get('/api/character?name=검증캐릭터')]);
-  assert.equal(first.status, 200); assert.equal(second.status, 200); assert.equal(calls.length, 5);
+  assert.equal(first.status, 200); assert.equal(second.status, 200); assert.equal(calls.length, 6);
+  assert.equal(first.body.items[0].item_kind, 'equipment');
   assert.equal(first.body.items[0].item_add_option.str, '60');
   assert.equal(first.body.items[0].item_total_option.base_equipment_level, 200);
   assert.equal(first.body.items[0].item_description, '검증용 장비 설명');
@@ -33,7 +34,37 @@ test('successful lookup preserves equipment details, caches and coalesces withou
   assert.equal(first.headers['cache-control'], 'no-store');
   assert.ok(calls.slice(1).every((call) => new URL(call.url).searchParams.get('date') === '2026-09-08'));
   assert.equal((await request(app).get('/api/character?name=검증캐릭터')).body.cached, true);
-  assert.equal(calls.length, 5);
+  assert.equal(calls.length, 6);
+});
+
+test('equipment lookup merges every current cash item and preserves cash metadata', async () => {
+  const raw = responses();
+  raw.cash.cash_item_equipment_base = [{
+    cash_item_equipment_part: '모자', cash_item_equipment_slot: '모자', cash_item_name: '별빛 모자',
+    cash_item_icon: 'https://open.api.nexon.com/static/maplestory/item/cash.png', cash_item_description: '캐시 장비 설명',
+    cash_item_option: [{ option_type: '캐릭터 최대 HP 증가', option_value: '250' }],
+    date_expire: '2026-12-31T00:00+09:00', date_option_expire: null, cash_item_label: '스페셜라벨',
+    cash_item_coloring_prism: { color_range: '전체', hue: 10, saturation: 20, value: 30 },
+    cash_item_effect_prism: null, item_gender: '공용', skills: ['캐시 스킬'], freestyle_flag: '0', emotion_name: null,
+  }];
+  raw.cash.additional_cash_item_equipment_base = [{
+    cash_item_equipment_part: '망토', cash_item_equipment_slot: '망토', cash_item_name: '추가 외형 망토',
+    cash_item_icon: 'https://open.api.nexon.com/static/maplestory/item/cape.png', cash_item_description: null,
+    cash_item_option: [], date_expire: null, date_option_expire: null, cash_item_label: null,
+    cash_item_coloring_prism: null, cash_item_effect_prism: null, item_gender: null, skills: [], freestyle_flag: null, emotion_name: null,
+  }];
+
+  const result = await request(setup(raw).app).get('/api/character?name=검증캐릭터');
+
+  assert.equal(result.status, 200);
+  assert.deepEqual(result.body.items.map(({ item_name, item_kind }) => ({ item_name, item_kind })), [
+    { item_name: '검증 장갑', item_kind: 'equipment' },
+    { item_name: '별빛 모자', item_kind: 'cash' },
+    { item_name: '추가 외형 망토', item_kind: 'cash' },
+  ]);
+  assert.deepEqual(result.body.items[1].cash_item_option, [{ option_type: '캐릭터 최대 HP 증가', option_value: '250' }]);
+  assert.equal(result.body.items[1].cash_item_label, '스페셜라벨');
+  assert.equal(result.body.items[1].item_icon, 'https://open.api.nexon.com/static/maplestory/item/cash.png');
 });
 
 test('equipment lookup preserves duplicate parts and Maple upgrade metadata', async () => {
@@ -146,10 +177,10 @@ test('daily request budget survives service restart', async () => {
   const folder = await mkdtemp(join(tmpdir(), 'maple-test-'));
   try {
     const quotaFile = join(folder, 'quota.json');
-    const one = setup(responses(), { quotaFile, dailyLimit: 5 });
+    const one = setup(responses(), { quotaFile, dailyLimit: 6 });
     await one.service.lookup('첫조회');
-    assert.equal(JSON.parse(await readFile(quotaFile, 'utf8')).count, 5);
-    const two = setup(responses(), { quotaFile, dailyLimit: 5 });
+    assert.equal(JSON.parse(await readFile(quotaFile, 'utf8')).count, 6);
+    const two = setup(responses(), { quotaFile, dailyLimit: 6 });
     await assert.rejects(two.service.lookup('다른조회'), { code: 'DAILY_LIMIT' });
     assert.equal(two.calls.length, 0);
     await writeFile(quotaFile, '{broken');
@@ -158,7 +189,7 @@ test('daily request budget survives service restart', async () => {
 });
 test('cache expires and triggers a fresh snapshot', async () => {
   let time = now(); const { service, calls } = setup(responses(), { now: () => time, cacheTtl: 100 });
-  await service.lookup('검증'); time += 101; await service.lookup('검증'); assert.equal(calls.length, 10);
+  await service.lookup('검증'); time += 101; await service.lookup('검증'); assert.equal(calls.length, 12);
 });
 test('KST cutoff uses the latest completed day; image URLs reject third parties', () => {
   assert.equal(snapshotDate(Date.parse('2026-09-08T16:59:00Z')), '2026-09-07');

@@ -35,6 +35,30 @@ const equipmentSchema = z.object({
   item_equipment_preset_2: itemList,
   item_equipment_preset_3: itemList,
 });
+const cashItemOptionSchema = z.object({ option_type: z.string(), option_value: z.string() });
+const cashItemSchema = z.object({
+  cash_item_equipment_part: z.string(), cash_item_equipment_slot: z.string(), cash_item_name: z.string(),
+  cash_item_icon: value, cash_item_description: value,
+  cash_item_option: z.array(cashItemOptionSchema).nullable().optional().transform((entries) => entries ?? []),
+  date_expire: value, is_expired: z.boolean().nullable().optional(),
+  date_option_expire: value, is_option_expired: z.boolean().nullable().optional(), cash_item_label: value,
+  cash_item_coloring_prism: z.record(z.string(), z.unknown()).nullable().optional(),
+  cash_item_effect_prism: z.record(z.string(), z.unknown()).nullable().optional(),
+  item_gender: value, skills: z.array(z.string()).nullable().optional().transform((entries) => entries ?? []),
+  freestyle_flag: value, emotion_name: value,
+});
+const cashItemList = z.array(cashItemSchema).nullable().optional().transform((items) => items ?? []);
+const cashEquipmentSchema = z.object({
+  date: z.string(), preset_no: z.number().nullable().optional(),
+  cash_item_equipment_base: cashItemList,
+  cash_item_equipment_preset_1: cashItemList,
+  cash_item_equipment_preset_2: cashItemList,
+  cash_item_equipment_preset_3: cashItemList,
+  additional_cash_item_equipment_base: cashItemList,
+  additional_cash_item_equipment_preset_1: cashItemList,
+  additional_cash_item_equipment_preset_2: cashItemList,
+  additional_cash_item_equipment_preset_3: cashItemList,
+});
 const statSchema = z.object({ date: z.string(), final_stat: z.array(z.object({ stat_name: z.string(), stat_value: z.string() })).nullable().transform((stats) => stats ?? []) });
 const setSchema = z.object({ date: z.string(), set_effect: z.array(z.object({ set_name: z.string(), total_set_count: z.number(), set_effect_info: z.array(z.object({ set_count: z.number(), set_option: z.string() })).nullable().transform((effects) => effects ?? []), set_option_full: z.array(z.object({ set_count: z.number(), set_option: z.string() })).nullable().optional() })).nullable().transform((sets) => sets ?? []) });
 
@@ -52,21 +76,42 @@ export function snapshotDate(now = Date.now()) {
   return kst.toISOString().slice(0, 10);
 }
 
+function normalizeCashItem(item, appearanceMode) {
+  return {
+    item_kind: 'cash', appearance_mode: appearanceMode,
+    item_name: item.cash_item_name, item_equipment_slot: item.cash_item_equipment_slot,
+    item_equipment_part: item.cash_item_equipment_part, item_icon: safeImage(item.cash_item_icon),
+    item_description: item.cash_item_description, item_gender: item.item_gender,
+    cash_item_option: item.cash_item_option, date_expire: item.date_expire, is_expired: item.is_expired ?? null,
+    date_option_expire: item.date_option_expire, is_option_expired: item.is_option_expired ?? null,
+    cash_item_label: item.cash_item_label, cash_item_coloring_prism: item.cash_item_coloring_prism ?? null,
+    cash_item_effect_prism: item.cash_item_effect_prism ?? null, skills: item.skills,
+    freestyle_flag: item.freestyle_flag, emotion_name: item.emotion_name,
+  };
+}
+
 export function normalizeSnapshot(raw, requestedDate, fetchedAt) {
-  const parsed = [basicSchema.safeParse(raw.basic), equipmentSchema.safeParse(raw.equipment), statSchema.safeParse(raw.stat), setSchema.safeParse(raw.set)];
+  const parsed = [basicSchema.safeParse(raw.basic), equipmentSchema.safeParse(raw.equipment), cashEquipmentSchema.safeParse(raw.cash), statSchema.safeParse(raw.stat), setSchema.safeParse(raw.set)];
   if (parsed.some((result) => !result.success)) throw new LookupError('INCOMPLETE_DATA', '장비 정보가 아직 완전하지 않습니다. 잠시 후 다시 조회해 주세요.');
-  const [basic, equipment, stat, set] = parsed.map((result) => result.data);
+  const [basic, equipment, cash, stat, set] = parsed.map((result) => result.data);
   if (parsed.some((result) => result.data.date.slice(0, 10) !== requestedDate)) throw new LookupError('INCONSISTENT_DATA', '조회 기준일이 서로 다릅니다. 잠시 후 다시 조회해 주세요.');
   const selectedEquipment = selectBossEquipmentPreset({
     activePreset: equipment.preset_no ?? null,
     currentItems: equipment.item_equipment,
     presets: [1, 2, 3].map((preset) => ({ preset, items: equipment[`item_equipment_preset_${preset}`] })),
   });
+  const equippedItems = selectedEquipment.items.map((item) => ({
+    ...item, item_kind: 'equipment', item_icon: safeImage(item.item_icon), item_shape_icon: safeImage(item.item_shape_icon),
+  }));
+  const cashItems = [
+    ...cash.cash_item_equipment_base.map((item) => normalizeCashItem(item, 'base')),
+    ...cash.additional_cash_item_equipment_base.map((item) => normalizeCashItem(item, 'additional')),
+  ];
   return {
     source: 'nexon', date: requestedDate, fetchedAt, preset: selectedEquipment.preset,
     presetSelection: selectedEquipment.selection,
     character: { name: basic.character_name, job: basic.character_class, level: basic.character_level, world: basic.world_name, image: safeImage(basic.character_image) },
-    items: selectedEquipment.items.map((item) => ({ ...item, item_icon: safeImage(item.item_icon), item_shape_icon: safeImage(item.item_shape_icon) })),
+    items: [...equippedItems, ...cashItems],
     stats: stat.final_stat, sets: set.set_effect,
     combat: buildCombatSnapshot(stat.final_stat),
     analysis: { status: 'unverified', message: '직업별 계산과 보스 목표 기준 검증 전입니다.' },
@@ -155,9 +200,10 @@ export function createNexonService({ apiKey, fetchImpl = fetch, now = Date.now, 
       const params = { ocid: identity.ocid, date };
       const basic = await request('character/basic', params);
       const equipment = await request('character/item-equipment', params);
+      const cash = await request('character/cashitem-equipment', params);
       const stat = await request('character/stat', params);
       const set = await request('character/set-effect', params);
-      const data = normalizeSnapshot({ basic, equipment, stat, set }, date, new Date(now()).toISOString());
+      const data = normalizeSnapshot({ basic, equipment, cash, stat, set }, date, new Date(now()).toISOString());
       for (const [oldKey, entry] of cache) if (entry.expires <= now()) cache.delete(oldKey);
       if (cache.size >= maxCache) cache.delete(cache.keys().next().value);
       cache.set(key, { data, expires: now() + cacheTtl });

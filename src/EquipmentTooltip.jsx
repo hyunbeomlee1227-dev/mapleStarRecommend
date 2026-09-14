@@ -121,6 +121,25 @@ function ScrollResult({ values }) {
   return <p className="tooltip-scroll-result"><span>강화 결과</span>{entries.map(([key, value]) => <strong key={key}>{statLabels[key] || key} {formattedValue(key, value)}</strong>)}</p>;
 }
 
+function formattedDate(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return new Intl.DateTimeFormat('ko-KR', { timeZone: 'Asia/Seoul', dateStyle: 'medium' }).format(date);
+}
+
+function CashItemDetails({ item }) {
+  if (item.item_kind !== 'cash') return null;
+  return <section className="tooltip-section tooltip-cash-details">
+    <h4>캐시 장비 정보</h4>
+    {item.cash_item_label && <p><span>라벨</span><strong>{item.cash_item_label}</strong></p>}
+    {item.appearance_mode === 'additional' && <p><span>외형 구분</span><strong>추가 외형</strong></p>}
+    {item.date_expire && <p><span>아이템 만료</span><strong>{formattedDate(item.date_expire)}</strong></p>}
+    {item.date_option_expire && <p><span>옵션 만료</span><strong>{formattedDate(item.date_option_expire)}</strong></p>}
+    {item.cash_item_option?.map((option, index) => <p key={`${option.option_type}-${index}`}><span>{option.option_type}</span><strong>{option.option_value}</strong></p>)}
+    {item.skills?.map((skill) => <p key={skill}><span>스킬</span><strong>{skill}</strong></p>)}
+  </section>;
+}
+
 export default function EquipmentTooltip({ item, characterJob, onOpenPotentialOptions }) {
   const [lineGrades, setLineGrades] = useState({ regular: [], additional: [] });
   useEffect(() => {
@@ -151,13 +170,13 @@ export default function EquipmentTooltip({ item, characterJob, onOpenPotentialOp
     </header>
     <div className="tooltip-summary">
       <EquipmentIcon item={item} />
-      <div className="tooltip-summary-copy"><div className="tooltip-tags"><span>{item.item_equipment_part || item.item_equipment_slot}</span>{item.item_gender && <span>{item.item_gender}</span>}</div><p>착용 캐릭터 직업 <strong>{characterJob || '정보 없음'}</strong></p>{level !== null && <p>요구 레벨 <strong>Lv. {level}</strong></p>}{item.item_shape_name && item.item_shape_name !== item.item_name && <p>외형 <strong>{item.item_shape_name}</strong></p>}</div>
+      <div className="tooltip-summary-copy"><div className="tooltip-tags">{item.item_kind === 'cash' && <span>캐시 장비</span>}<span>{item.item_equipment_part || item.item_equipment_slot}</span>{item.item_gender && <span>{item.item_gender}</span>}</div><p>착용 캐릭터 직업 <strong>{characterJob || '정보 없음'}</strong></p>{level !== null && <p>요구 레벨 <strong>Lv. {level}</strong></p>}{item.item_shape_name && item.item_shape_name !== item.item_name && <p>외형 <strong>{item.item_shape_name}</strong></p>}</div>
     </div>
-    <section className="tooltip-section tooltip-stat-section"><StatBreakdown item={item} /></section>
+    {item.item_kind === 'cash' ? <CashItemDetails item={item} /> : <section className="tooltip-section tooltip-stat-section"><StatBreakdown item={item} /></section>}
     {(upgrades > 0 || remaining !== null || resilience !== null) && <section className="tooltip-section tooltip-upgrade"><div><strong>주문서 강화 {upgrades}회</strong><span>(잔여 {remaining ?? 0}회, 복구 가능 {resilience ?? 0}회)</span></div>{item.golden_hammer_flag && <small>황금 망치 {item.golden_hammer_flag}</small>}<ScrollResult values={item.item_etc_option} /></section>}
     {(item.growth_level || item.soul_name) && <section className="tooltip-section tooltip-extra">{item.growth_level ? <p>성장 레벨 <strong>{item.growth_level}</strong>{item.growth_exp != null && <span> · 경험치 {Number(item.growth_exp).toLocaleString('ko-KR')}</span>}</p> : null}{item.soul_name && <p>{item.soul_name} · {item.soul_option || '소울 옵션 정보 없음'}</p>}</section>}
     <PotentialBlock item={item} lineGrades={lineGrades.regular} />
     <PotentialBlock item={item} additional lineGrades={lineGrades.additional} />
-    <button className="tooltip-official-options" disabled={!canLookupPotentialOptions(item)} onClick={onOpenPotentialOptions}>공식 잠재 옵션표 보기<ArrowUpRight size={13} /></button>
+    {item.item_kind !== 'cash' && <button className="tooltip-official-options" disabled={!canLookupPotentialOptions(item)} onClick={onOpenPotentialOptions}>공식 잠재 옵션표 보기<ArrowUpRight size={13} /></button>}
   </article>;
 }
