@@ -114,6 +114,34 @@ test('potential progression includes tier-up costs without charging the arrival 
   assert.equal(result.guaranteeApplied, true);
 });
 
+test('potential progression defaults guarantees, supports multiple tiers and skips them for the same grade', () => {
+  const tierRules = {
+    rare: { nextGrade: 'epic', successProbability: 0.5, guaranteeAttempts: 2 },
+    epic: { nextGrade: 'unique', successProbability: 0.25, guaranteeAttempts: 4 },
+  };
+  const result = calculatePotentialProgression({
+    currentGrade: 'rare', targetGrade: 'unique', targetExpectedResets: 4,
+    costs: { rare: 10, epic: 20, unique: 30 }, tierRules,
+    tierRemainingAttempts: { epic: 2 },
+  });
+
+  assert.deepEqual(result.tierSteps.map(({ currentGrade, remainingAttempts }) => ({ currentGrade, remainingAttempts })), [
+    { currentGrade: 'rare', remainingAttempts: 2 },
+    { currentGrade: 'epic', remainingAttempts: 2 },
+  ]);
+  assert.equal(result.expectedResets, 1.5 + 1.75 + 3);
+  assert.equal(result.expectedMeso, 15 + 35 + 90);
+  assert.equal(result.guaranteeApplied, true);
+
+  const sameGrade = calculatePotentialProgression({
+    currentGrade: 'unique', targetGrade: 'unique', targetExpectedResets: 4,
+    costs: { unique: 30 }, tierRules,
+  });
+  assert.deepEqual(sameGrade, {
+    expectedResets: 4, expectedMeso: 120, tierSteps: [], guaranteeApplied: false,
+  });
+});
+
 test('potential progression rejects incomplete grade paths instead of inventing costs', () => {
   assert.throws(() => calculatePotentialProgression({
     type: 'regular', currentGrade: 'epic', targetGrade: 'legendary', targetExpectedResets: 2,

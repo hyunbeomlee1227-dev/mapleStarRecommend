@@ -138,5 +138,5 @@ export function calculatePotentialProgression({ currentGrade, targetGrade, targe
   const targetResetsAfterArrival = Math.max(0, targetExpectedResets - (targetIndex > currentIndex ? 1 : 0));
   expectedResets += targetResetsAfterArrival;
   expectedMeso += Math.round(targetResetsAfterArrival * targetResetCost);
-  return { expectedResets, expectedMeso, tierSteps, guaranteeApplied: true };
+  return { expectedResets, expectedMeso, tierSteps, guaranteeApplied: tierSteps.length > 0 };
 }
