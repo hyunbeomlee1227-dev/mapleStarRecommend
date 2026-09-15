@@ -119,6 +119,13 @@ const fileSchema = z.object({
     pcRoomDiscountRate: z.literal(0.05),
     sources: z.array(z.string().url()).length(2),
   }),
+  starforceSafeguard: z.object({
+    verifiedAgainst: z.iso.date(),
+    eligibleStars: z.tuple([z.literal(15), z.literal(16), z.literal(17)]),
+    surchargeRate: z.literal(2),
+    outcomeRule: z.literal('destroy-to-maintain'),
+    source: z.string().url(),
+  }),
   starforceRestoreResources: restoreResourcesSchema,
 });
 

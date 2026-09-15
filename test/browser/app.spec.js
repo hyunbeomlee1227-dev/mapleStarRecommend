@@ -72,13 +72,15 @@ test('equipment browsing, filters, detail and status remain usable', async ({ pa
   await expect(gloveStarforce).toContainText('4,005,000,000 메소');
   await expect(page.getByText('강화 규칙 2/5 검증')).toBeVisible();
   await page.getByText('강화 규칙 2/5 검증').click();
-  await expect(page.getByText('2026-09-15-v10 · 2026-09-15')).toBeVisible();
+  await expect(page.getByText('2026-09-15-v11 · 2026-09-15')).toBeVisible();
   await expect(page.getByText('잠재 재설정 비용', { exact: true })).toBeVisible();
   await expect(page.getByText('스타포스 기대 비용', { exact: true })).toBeVisible();
   await expect(page.getByText('비용순 추천 완료', { exact: true })).toBeVisible();
   await page.getByLabel('MVP 등급').selectOption('gold');
   await page.getByLabel('PC방 할인').check();
   await expect(page.getByLabel('분석 가능 장비')).toContainText('17성까지 10% 할인');
+  await page.getByLabel('파괴 방지').check();
+  await expect(page.getByLabel('분석 가능 장비')).toContainText('15~17성 파괴 방지');
   await page.screenshot({ path: `test-results/${info.project.name}.png`, fullPage: true });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   expect(errors).toEqual([]);

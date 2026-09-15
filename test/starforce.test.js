@@ -88,3 +88,45 @@ test('target costs apply the selected permanent starforce benefits', () => {
   assert.equal(discounted.expectedMeso, Math.round(starforceAttemptCost(200, 15) * 0.9) + Math.round(starforceAttemptCost(200, 16) * 0.9));
   assert.ok(discounted.expectedMeso < base.expectedMeso);
 });
+
+test('safeguard adds 200% of the undiscounted base cost and prevents destruction at 15 through 17 stars', () => {
+  const baseCost = starforceAttemptCost(200, 16);
+  const conditions = {
+    discountRate: 0.15,
+    discountUntilStar: 17,
+    safeguard: true,
+    safeguardStars: [15, 16, 17],
+    safeguardSurchargeRate: 2,
+  };
+  const result = calculateNextStarCost({
+    level: 200,
+    star: 16,
+    outcome: { successProbability: 0.315, maintainProbability: 0.6645, destroyProbability: 0.0205 },
+    restoreResources: resources,
+    conditions,
+  });
+
+  const expectedAttemptCost = Math.round(baseCost * 0.85) + Math.round(baseCost * 2);
+  assert.equal(result.attemptCost, expectedAttemptCost);
+  assert.equal(result.recovery, null);
+  assert.equal(result.expectedMesoWithOwnedRecoveryItems, Math.round(expectedAttemptCost / 0.315));
+  assert.equal(result.expectedRecoveryCopies, 0);
+});
+
+test('safeguard is ignored outside its eligible star range', () => {
+  const conditions = {
+    safeguard: true,
+    safeguardStars: [15, 16, 17],
+    safeguardSurchargeRate: 2,
+  };
+  const result = calculateNextStarCost({
+    level: 200,
+    star: 18,
+    outcome,
+    restoreResources: resources,
+    conditions,
+  });
+
+  assert.equal(result.attemptCost, starforceAttemptCost(200, 18));
+  assert.equal(result.expectedRecoveryCopies, outcome.destroyProbability / outcome.successProbability);
+});

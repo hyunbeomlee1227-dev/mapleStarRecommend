@@ -79,11 +79,15 @@ test('equipment target catalog is validated and versioned', async () => {
 test('recommendation input validates permanent starforce benefits', () => {
   assert.equal(recommendationRequestSchema.safeParse({
     goalId: goal.id, mode: 'all', budgetMesos: null, combat, items: [],
-    starforceConditions: { mvpGrade: 'gold', pcRoom: true },
+    starforceConditions: { mvpGrade: 'gold', pcRoom: true, safeguard: true },
   }).success, true);
   assert.equal(recommendationRequestSchema.safeParse({
     goalId: goal.id, mode: 'all', budgetMesos: null, combat, items: [],
     starforceConditions: { mvpGrade: 'vip', pcRoom: true },
+  }).success, false);
+  assert.equal(recommendationRequestSchema.safeParse({
+    goalId: goal.id, mode: 'all', budgetMesos: null, combat, items: [],
+    starforceConditions: { mvpGrade: 'none', pcRoom: false, safeguard: 'yes' },
   }).success, false);
 });
 
@@ -163,7 +167,7 @@ test('starforce targets are sorted by expected cost per star and budget is appli
     goal, mode: 'all', budgetMesos: null, combat, characterJob: '히어로', items: costItems, rules,
     equipmentTargets: targets, starforceConditions: { mvpGrade: 'diamond', pcRoom: true },
   });
-  assert.deepEqual(discounted.equipmentTargetTrace.starforceConditions, { mvpGrade: 'diamond', pcRoom: true });
+  assert.deepEqual(discounted.equipmentTargetTrace.starforceConditions, { mvpGrade: 'diamond', pcRoom: true, safeguard: false });
 
   const lowStarTargets = { version: 'benefit-v1', updatedAt: '2026-09-15', rules: [{
     id: 'target-17', slots: ['모자'], minGoalOrder: 0, maxGoalOrder: 999,
@@ -176,6 +180,14 @@ test('starforce targets are sorted by expected cost per star and budget is appli
     starforceConditions: { mvpGrade: 'gold', pcRoom: true },
   });
   assert.ok(withBenefits.equipmentRecommendations[0].expectedMeso < undiscounted.equipmentRecommendations[0].expectedMeso);
+  const protectedPlan = buildRecommendationPlan({
+    goal, mode: 'all', budgetMesos: null, combat, items: lowStarItem, rules, equipmentTargets: lowStarTargets,
+    starforceConditions: { mvpGrade: 'gold', pcRoom: true, safeguard: true },
+  });
+  assert.equal(protectedPlan.equipmentRecommendations[0].expectedRecoveryCopies, 0);
+  assert.equal(protectedPlan.supportedCalculations.starforceRisks[0].destroyProbability, 0);
+  assert.equal(protectedPlan.supportedCalculations.starforceRisks[0].maintainProbability, 1 - rules.starforceOutcomes['15'].successProbability);
+  assert.ok(protectedPlan.equipmentRecommendations[0].expectedMeso > withBenefits.equipmentRecommendations[0].expectedMeso);
 });
 
 test('superior equipment is excluded from standard starforce recommendations', async () => {

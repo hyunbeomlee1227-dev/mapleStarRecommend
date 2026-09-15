@@ -9,7 +9,7 @@ import { createApp } from '../server/app.js';
 
 test('upgrade rule catalog exposes verified costs and blocks incomplete calculations', async () => {
   const rules = await loadUpgradeRules();
-  assert.equal(rules.version, '2026-09-15-v10');
+  assert.equal(rules.version, '2026-09-15-v11');
   assert.equal(rules.capabilities.potentialResetCost.status, 'verified');
   assert.equal(rules.capabilities.potentialTierUpgrade.status, 'verified');
   assert.equal(rules.capabilities.potentialTierUpgrade.usableForRecommendation, true);
@@ -33,6 +33,10 @@ test('upgrade rule catalog exposes verified costs and blocks incomplete calculat
   });
   assert.equal(rules.starforcePermanentBenefits.pcRoomDiscountRate, 0.05);
   assert.equal(rules.starforcePermanentBenefits.discountUntilStar, 17);
+  assert.deepEqual(rules.starforceSafeguard, {
+    verifiedAgainst: '2026-09-15', eligibleStars: [15, 16, 17], surchargeRate: 2,
+    outcomeRule: 'destroy-to-maintain', source: 'https://maplestory.nexon.com/News/Update/767',
+  });
   assert.deepEqual(rules.starforceRestoreResources.levels['200']['18'], {
     requiredCopies: 1,
     restoreMeso: 4_005_000_000,

@@ -1,5 +1,5 @@
 {
-  "version": "2026-09-15-v10",
+  "version": "2026-09-15-v11",
   "updatedAt": "2026-09-15",
   "capabilities": {
     "potentialResetCost": {
@@ -120,6 +120,13 @@
       "https://maplestory.nexon.com/Guide/N23GameInformation/Articles/425",
       "https://maplestory.nexon.com/Guide/N23GameInformation/Articles/444"
     ]
+  },
+  "starforceSafeguard": {
+    "verifiedAgainst": "2026-09-15",
+    "eligibleStars": [15, 16, 17],
+    "surchargeRate": 2,
+    "outcomeRule": "destroy-to-maintain",
+    "source": "https://maplestory.nexon.com/News/Update/767"
   },
   "starforceRestoreResources": {
     "sourceKind": "community",

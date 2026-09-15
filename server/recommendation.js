@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { supportsStandardStarforce } from '../shared/equipment.js';
-import { calculateNextStarCost, calculateStarforceTargetCost } from './starforce.js';
+import { calculateNextStarCost, calculateStarforceTargetCost, starforceOutcomeForConditions } from './starforce.js';
 
 const itemSchema = z.object({
   item_name: z.string().min(1).max(200),
@@ -19,6 +19,7 @@ const itemSchema = z.object({
 const starforceConditionsSchema = z.object({
   mvpGrade: z.enum(['none', 'silver', 'gold', 'diamond', 'red', 'black']),
   pcRoom: z.boolean(),
+  safeguard: z.boolean().default(false),
 });
 
 export const recommendationRequestSchema = z.object({
@@ -30,7 +31,7 @@ export const recommendationRequestSchema = z.object({
     readiness: z.string().max(50),
     message: z.string().max(500).optional(),
   }).passthrough(),
-  starforceConditions: starforceConditionsSchema.default({ mvpGrade: 'none', pcRoom: false }),
+  starforceConditions: starforceConditionsSchema.default({ mvpGrade: 'none', pcRoom: false, safeguard: false }),
   items: z.array(itemSchema).max(60),
 }).superRefine((value, context) => {
   if (value.mode === 'budget' && value.budgetMesos === null) {
@@ -62,15 +63,26 @@ function jobEquipmentReference(characterJob, items, equipmentBaselines) {
 
 const gradeIds = { '레어': 'rare', '에픽': 'epic', '유니크': 'unique', '레전드리': 'legendary' };
 
-function resolveStarforceConditions(rules, selected = { mvpGrade: 'none', pcRoom: false }) {
-  const normalized = { mvpGrade: selected?.mvpGrade ?? 'none', pcRoom: selected?.pcRoom === true };
+function resolveStarforceConditions(rules, selected = { mvpGrade: 'none', pcRoom: false, safeguard: false }) {
+  const normalized = {
+    mvpGrade: selected?.mvpGrade ?? 'none',
+    pcRoom: selected?.pcRoom === true,
+    safeguard: selected?.safeguard === true,
+  };
   const config = rules?.starforcePermanentBenefits;
+  const safeguardConfig = rules?.starforceSafeguard;
   if (!config) return { selected: normalized, calculation: undefined, discountRate: 0 };
   const discountRate = (config.mvpDiscountRates[normalized.mvpGrade] ?? 0)
     + (normalized.pcRoom ? config.pcRoomDiscountRate : 0);
   return {
     selected: normalized,
-    calculation: { discountRate, discountUntilStar: config.discountUntilStar },
+    calculation: {
+      discountRate,
+      discountUntilStar: config.discountUntilStar,
+      safeguard: normalized.safeguard,
+      safeguardStars: safeguardConfig?.eligibleStars ?? [],
+      safeguardSurchargeRate: safeguardConfig?.surchargeRate ?? 0,
+    },
     discountRate,
   };
 }
@@ -172,9 +184,10 @@ function starforceRisks(items, rules, starforceCalculationConditions) {
       restoreResources: rules.starforceRestoreResources?.levels,
       conditions: starforceCalculationConditions,
     });
+    const effectiveOutcome = starforceOutcomeForConditions(currentStar, outcome, starforceCalculationConditions);
     return [{
       type: 'starforce-risk', itemName: item.item_name, slot: item.item_equipment_slot, currentStar,
-      ...outcome,
+      ...effectiveOutcome,
       traceRecoveryStar: cost.recovery?.targetStar ?? null,
       intactRecoveryCopies: cost.recovery?.requiredCopies ?? null,
       intactRecoveryMeso: cost.recovery?.restoreMeso ?? null,

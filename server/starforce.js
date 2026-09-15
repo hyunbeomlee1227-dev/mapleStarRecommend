@@ -1,4 +1,4 @@
-export function starforceAttemptCost(level, star, conditions = {}) {
+function baseStarforceAttemptCost(level, star) {
   let baseCost;
   if (star <= 9) baseCost = Math.round((1000 + (level ** 3 * (star + 1)) / 36) / 100) * 100;
   else {
@@ -6,9 +6,31 @@ export function starforceAttemptCost(level, star, conditions = {}) {
     const raw = level ** 3 * (star + 1) ** 2.7 / (divisors[star] ?? 200);
     baseCost = 1000 + Math.round(raw / 100) * 100;
   }
+  return baseCost;
+}
+
+function safeguardApplies(star, conditions = {}) {
+  return conditions.safeguard === true && conditions.safeguardStars?.includes(star);
+}
+
+export function starforceAttemptCost(level, star, conditions = {}) {
+  const baseCost = baseStarforceAttemptCost(level, star);
   const discountRate = Math.min(1, Math.max(0, Number(conditions.discountRate) || 0));
   const discountUntilStar = Number(conditions.discountUntilStar) || 0;
-  return star < discountUntilStar ? Math.round(baseCost * (1 - discountRate)) : baseCost;
+  const discountedCost = star < discountUntilStar ? Math.round(baseCost * (1 - discountRate)) : baseCost;
+  const safeguardSurcharge = safeguardApplies(star, conditions)
+    ? Math.round(baseCost * (Number(conditions.safeguardSurchargeRate) || 0))
+    : 0;
+  return discountedCost + safeguardSurcharge;
+}
+
+export function starforceOutcomeForConditions(star, outcome, conditions = {}) {
+  if (!safeguardApplies(star, conditions)) return outcome;
+  return {
+    successProbability: outcome.successProbability,
+    maintainProbability: 1 - outcome.successProbability,
+    destroyProbability: 0,
+  };
 }
 
 function calculateRecoveryJourney({ level, star, outcomes, resource, conditions }) {
@@ -60,11 +82,12 @@ function calculateRecoveryJourney({ level, star, outcomes, resource, conditions 
 
 export function calculateNextStarCost({ level, star, outcome, outcomes, restoreResources, conditions }) {
   const attemptCost = starforceAttemptCost(level, star, conditions);
-  if (outcome.destroyProbability === 0) {
+  const effectiveOutcome = starforceOutcomeForConditions(star, outcome, conditions);
+  if (effectiveOutcome.destroyProbability === 0) {
     return {
       attemptCost,
       recovery: null,
-      expectedMesoWithOwnedRecoveryItems: Math.round(attemptCost / outcome.successProbability),
+      expectedMesoWithOwnedRecoveryItems: Math.round(attemptCost / effectiveOutcome.successProbability),
       expectedRecoveryCopies: 0,
     };
   }
@@ -94,9 +117,9 @@ export function calculateNextStarCost({ level, star, outcome, outcomes, restoreR
     attemptCost,
     recovery: { targetStar, ...resource },
     expectedMesoWithOwnedRecoveryItems: Math.round(
-      (attemptCost + outcome.destroyProbability * resource.restoreMeso) / outcome.successProbability,
+      (attemptCost + effectiveOutcome.destroyProbability * resource.restoreMeso) / effectiveOutcome.successProbability,
     ),
-    expectedRecoveryCopies: outcome.destroyProbability * resource.requiredCopies / outcome.successProbability,
+    expectedRecoveryCopies: effectiveOutcome.destroyProbability * resource.requiredCopies / effectiveOutcome.successProbability,
   };
 }
 
