@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { readFile } from 'node:fs/promises';
 import { writeFileAtomically } from './file-write.js';
+import { selectBossEquipmentPreset } from './equipment-preset.js';
 
 const usageSchema = z.object({
   itemName: z.string().min(1).max(200),
@@ -140,9 +141,12 @@ export async function collectEquipmentObservations({ service, ranking, date, job
     try {
       const identity = await service.requestRaw('id', { character_name: entry.character_name });
       const equipment = await service.requestRaw('character/item-equipment', { ocid: identity.ocid, date });
-      const items = Array.isArray(equipment?.item_equipment)
-        ? equipment.item_equipment.filter((item) => item?.item_equipment_slot && item?.item_name)
-        : [];
+      const selected = selectBossEquipmentPreset({
+        activePreset: equipment?.preset_no ?? null,
+        currentItems: equipment?.item_equipment ?? [],
+        presets: [1, 2, 3].map((preset) => ({ preset, items: equipment?.[`item_equipment_preset_${preset}`] ?? [] })),
+      });
+      const items = selected.items.filter((item) => item?.item_equipment_slot && item?.item_name);
       if (!items.length) throw new Error('missing equipment');
       samples.push({
         job: jobOverride || entry.sub_class_name || entry.class_name,

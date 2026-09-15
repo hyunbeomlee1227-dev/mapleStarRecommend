@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { calculateNextStarCost, starforceAttemptCost } from '../server/starforce.js';
+import { calculateNextStarCost, calculateStarforceTargetCost, starforceAttemptCost } from '../server/starforce.js';
 
 const outcome = { successProbability: 0.1575, maintainProbability: 0.7751, destroyProbability: 0.0674 };
 const resources = { '200': { '18': { requiredCopies: 1, restoreMeso: 4_005_000_000 } } };
@@ -57,4 +57,13 @@ test('stars above 22 include recovery to 22 and the climb back to the current st
     expectedMesoWithOwnedRecoveryItems: 89_365_046_797,
     expectedRecoveryCopies: 14.114346182917625,
   });
+});
+
+test('target cost sums every star step and reports cost per gained star', () => {
+  const outcomes = Object.fromEntries([17, 18, 19, 20, 21].map((star) => [String(star), {
+    successProbability: 0.5, maintainProbability: 0.5, destroyProbability: 0,
+  }]));
+  const result = calculateStarforceTargetCost({ level: 200, currentStar: 18, targetStar: 22, outcomes, restoreResources: {} });
+  const expected = [18, 19, 20, 21].reduce((sum, star) => sum + Math.round(starforceAttemptCost(200, star) / 0.5), 0);
+  assert.deepEqual(result, { expectedMeso: expected, expectedRecoveryCopies: 0, starsGained: 4, expectedMesoPerStar: Math.round(expected / 4) });
 });

@@ -106,7 +106,7 @@ export function normalizeSnapshot(raw, requestedDate, fetchedAt) {
   const cashItems = [
     ...cash.cash_item_equipment_base.map((item) => normalizeCashItem(item, 'base')),
     ...cash.additional_cash_item_equipment_base.map((item) => normalizeCashItem(item, 'additional')),
-  ];
+  ].filter((item) => item.cash_item_option.length > 0);
   return {
     source: 'nexon', date: requestedDate, fetchedAt, preset: selectedEquipment.preset,
     presetSelection: selectedEquipment.selection,

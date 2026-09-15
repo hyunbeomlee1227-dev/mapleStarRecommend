@@ -56,7 +56,7 @@ test('equipment browsing, filters, detail and status remain usable', async ({ pa
   await page.getByRole('button', { name: '예산 내 추천' }).click();
   await expect(page.getByText('예산을 0보다 큰 억 메소 단위로 입력해 주세요.')).toBeVisible();
   await page.getByLabel('예산 (억 메소)').fill('100');
-  await expect(page.getByText('강화 후보 정보는 준비됐지만 비용과 성능 모델 검증 전이라 순위를 제공하지 않습니다.')).toBeVisible();
+  await expect(page.getByText('스타포스는 목표 별 1개당 기대 메소가 낮은 순서입니다. 최종뎀 효율은 아직 반영하지 않습니다.')).toBeVisible();
   await page.getByRole('tab', { name: '잠재능력', exact: true }).click();
   await expect(page.getByText('등급 상승 참고')).toBeVisible();
   await expect(page.getByText('38,250,000 메소').first()).toBeVisible();
@@ -75,20 +75,24 @@ test('equipment browsing, filters, detail and status remain usable', async ({ pa
   await expect(page.getByText('2026-09-14-v9 · 2026-09-14')).toBeVisible();
   await expect(page.getByText('잠재 재설정 비용', { exact: true })).toBeVisible();
   await expect(page.getByText('스타포스 기대 비용', { exact: true })).toBeVisible();
-  await expect(page.getByText('순위 계산 대기', { exact: true })).toBeVisible();
+  await expect(page.getByText('비용순 추천 완료', { exact: true })).toBeVisible();
   await page.screenshot({ path: `test-results/${info.project.name}.png`, fullPage: true });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   expect(errors).toEqual([]);
 });
 
-test('boss equipment goals are shown for the selected solo boss range', async ({ page }) => {
+test('boss equipment goals are shown for the selected solo boss range', async ({ page }, info) => {
   await page.goto('/');
   await page.getByLabel('보스', { exact: true }).selectOption('스우');
   await expect(page.getByLabel('난이도', { exact: true })).toHaveValue('lotus-hard');
-  await expect(page.getByRole('heading', { name: '일반 직업군 장비 목표' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '보스 장비 강화 우선순위' })).toBeVisible();
   await expect(page.getByText('에스텔라 이어링', { exact: true }).last()).toBeVisible();
   await expect(page.getByText('스타포스 17성 -> 22성', { exact: true }).first()).toBeVisible();
-  await expect(page.locator('.equipment-recommendation-list article').filter({ hasText: '마이스터링' })).toContainText('스타포스 17성 -> 18성');
+  const meisterStarforce = page.locator('.equipment-recommendation-list article').filter({ hasText: '마이스터링' }).filter({ has: page.getByText('스타포스 17성 -> 18성', { exact: true }) });
+  await expect(meisterStarforce).toHaveCount(1);
+  await expect(meisterStarforce).toContainText('예상');
+  await expect(page.getByText('보스전 유효 2줄 -> 3줄', { exact: true }).first()).toBeVisible();
+  await page.screenshot({ path: `test-results/recommendations-${info.project.name}.png`, fullPage: true });
   await page.getByLabel('난이도', { exact: true }).selectOption('lotus-extreme');
   await expect(page.getByText('아케인셰이드 투핸드소드', { exact: true }).last()).toBeVisible();
   await expect(page.getByText('스타포스 18성 -> 22성', { exact: true }).first()).toBeVisible();
@@ -124,8 +128,7 @@ test('real lookup UI merges cash equipment and keeps it out of upgrade recommend
   await expect(page.locator('.snapshot')).toContainText('프리셋 2 · 보스 옵션 자동 선택');
   await expect(page.locator('.demo-banner')).toHaveCount(0);
   await expect(page.getByRole('tab', { name: /^장비/ })).toContainText('12');
-  await page.getByLabel('장비 유형 필터').selectOption('cash');
-  await expect(page.locator('.item-row')).toHaveCount(1);
+  await expect(page.getByLabel('장비 유형 필터')).toHaveCount(0);
   await page.getByRole('button', { name: '별빛 모자 상세 보기' }).click();
   const detail = info.project.name === 'mobile' ? page.locator('.mobile-detail') : page.locator('.details-panel');
   await expect(detail.getByRole('heading', { name: '별빛 모자' })).toBeVisible();
@@ -264,16 +267,16 @@ test('Astra secondary weapons show stars while special rings do not', async ({ p
   await expect(page.getByRole('button', { name: '리스트레인트 링 상세 보기' }).locator('.not-applicable')).toHaveText('-');
 });
 
-test('job equipment reference uses the anonymized stratified ranking snapshot', async ({ page }, info) => {
+test('undersized job equipment reference is hidden', async ({ page }, info) => {
   await page.goto('/');
   const reference = page.getByLabel('같은 직업 장비 관측');
   await expect(reference.getByRole('heading', { name: '히어로 장비 사용 참고' })).toBeVisible();
-  await expect(reference).toContainText('표본 3명');
-  await expect(reference).toContainText('에테르넬 나이트헬름');
+  await expect(reference).toContainText('이 직업의 균등 표본은 아직 준비되지 않았습니다.');
+  await expect(reference).not.toContainText('에테르넬 나이트헬름');
   await expect(reference).toContainText('성능·가격·강화 우선순위를 뜻하지 않습니다');
   await page.getByRole('button', { name: '예산 내 추천' }).click();
   await expect(page.getByLabel('강화 추천 조건')).toContainText('예산을 0보다 큰 억 메소 단위로 입력해 주세요');
-  await expect(reference).toContainText('에테르넬 나이트헬름');
+  await expect(reference).not.toContainText('에테르넬 나이트헬름');
   expect(await reference.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
   await page.screenshot({ path: `test-results/job-equipment-reference-${info.project.name}.png`, fullPage: true });
 });
@@ -281,7 +284,7 @@ test('job equipment reference uses the anonymized stratified ranking snapshot', 
 test('switching characters never preserves the previous equipment reference', async ({ page }) => {
   await page.goto('/');
   const reference = page.getByLabel('같은 직업 장비 관측');
-  await expect(reference).toContainText('에테르넬 나이트헬름');
+  await expect(reference).toContainText('이 직업의 균등 표본은 아직 준비되지 않았습니다.');
 
   const { demo } = await import('../../src/demo.js');
   await page.route('**/api/character?*', (route) => route.fulfill({

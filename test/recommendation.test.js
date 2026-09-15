@@ -42,30 +42,36 @@ test('budget mode requires a positive integer mesos budget', () => {
 test('curated equipment target recommends Estella 22 stars only below Extreme Lotus', () => {
   const estella = { item_name: '에스텔라 이어링', item_equipment_slot: '귀고리', baseEquipmentLevel: 160, starforce: '17', potential_option_grade: '유니크', additional_potential_option_grade: '에픽' };
   const result = buildRecommendationPlan({ goal, mode: 'all', budgetMesos: null, combat, items: [estella], equipmentTargets });
-  assert.deepEqual(result.equipmentRecommendations, [{
+  const [starforceRecommendation] = result.equipmentRecommendations.filter((entry) => entry.recommendationKind === 'starforce');
+  assert.deepEqual(starforceRecommendation, {
     ruleId: 'estella-22-before-extreme-lotus',
     sourceKind: 'curated-rule',
+    recommendationKind: 'starforce',
     itemName: '에스텔라 이어링',
     slot: '귀고리',
     current: { starforce: 17 },
     target: { starforce: 22 },
     actions: ['스타포스 17성 -> 22성'],
+    expectedMeso: null,
+    expectedRecoveryCopies: null,
+    expectedMesoPerStar: null,
     reason: '익스트림 스우 미만 솔로 보스 목표에서 사용하는 장비 목표입니다.',
-  }]);
+  });
   assert.equal(result.equipmentTargetTrace.version, 'test-v1');
   assert.equal(result.equipmentTargetTrace.budgetApplied, false);
+  assert.equal(result.equipmentTargetTrace.budgetRemaining, null);
   assert.equal('expectedFinalDamage' in result.equipmentRecommendations[0], false);
 
   const extremeResult = buildRecommendationPlan({ goal: { ...goal, id: 'lotus-extreme', difficulty: '익스트림', order: 30 }, mode: 'all', budgetMesos: null, combat, items: [estella], equipmentTargets });
-  assert.deepEqual(extremeResult.equipmentRecommendations, []);
+  assert.equal(extremeResult.equipmentRecommendations.some((entry) => entry.recommendationKind === 'starforce'), false);
 
   const completedResult = buildRecommendationPlan({ goal, mode: 'all', budgetMesos: null, combat, items: [{ ...estella, starforce: '22' }], equipmentTargets });
-  assert.deepEqual(completedResult.equipmentRecommendations, []);
+  assert.equal(completedResult.equipmentRecommendations.some((entry) => entry.recommendationKind === 'starforce'), false);
 });
 
 test('equipment target catalog is validated and versioned', async () => {
   const catalog = await loadEquipmentTargets();
-  assert.equal(catalog.version, '2026-09-11-v4');
+  assert.equal(catalog.version, '2026-09-14-v5');
   assert.equal(catalog.rules[0].id, 'general-equipment-17-normal-lotus');
   assert.equal(catalog.rules.some((rule) => rule.id === 'astra-secondary-22-lategame'), true);
 });
@@ -85,16 +91,62 @@ test('general job baseline applies by normalized slot and keeps only the stronge
   ];
   const result = buildRecommendationPlan({ goal, mode: 'all', budgetMesos: null, combat, items: baselineItems, equipmentTargets: targets });
 
-  assert.deepEqual(result.equipmentRecommendations, [
+  assert.deepEqual(result.equipmentRecommendations.filter((entry) => entry.recommendationKind === 'starforce'), [
     {
-      ruleId: 'long-term-ring-22', sourceKind: 'curated-rule', itemName: '가디언 엔젤 링', slot: '반지2',
+      ruleId: 'long-term-ring-22', sourceKind: 'curated-rule', recommendationKind: 'starforce', itemName: '가디언 엔젤 링', slot: '반지2',
       current: { starforce: 17 }, target: { starforce: 22 }, actions: ['스타포스 17성 -> 22성'], reason: '장기 사용 장비군 기준',
+      expectedMeso: null, expectedRecoveryCopies: null, expectedMesoPerStar: null,
     },
     {
-      ruleId: 'general-18', sourceKind: 'curated-rule', itemName: '앱솔랩스 나이트글러브', slot: '장갑',
+      ruleId: 'general-18', sourceKind: 'curated-rule', recommendationKind: 'starforce', itemName: '앱솔랩스 나이트글러브', slot: '장갑',
       current: { starforce: 17 }, target: { starforce: 18 }, actions: ['스타포스 17성 -> 18성'], reason: '직업 공통 기준',
+      expectedMeso: null, expectedRecoveryCopies: null, expectedMesoPerStar: null,
     },
   ]);
+});
+
+test('boss potential recommendations require three effective combat lines', () => {
+  const potentialItems = [{
+    item_name: '검증 모자', item_equipment_slot: '모자', baseEquipmentLevel: 200, starforce: '22',
+    potential_option_grade: '레전드리', potential_option_1: 'STR : +13%',
+    potential_option_2: '아이템 드롭률 : +20%', potential_option_3: 'STR : +10%',
+  }];
+  const result = buildRecommendationPlan({ goal, mode: 'all', budgetMesos: null, combat, characterJob: '렌', items: potentialItems });
+  const potential = result.equipmentRecommendations.find((entry) => entry.recommendationKind === 'potential');
+  assert.equal(potential.current.effectiveLines, 2);
+  assert.deepEqual(potential.actions, ['보스전 유효 2줄 -> 3줄']);
+});
+
+test('new jobs use their official main stat and attack type for potential lines', () => {
+  const items = [{
+    item_name: '검증 무기', item_equipment_slot: '무기', baseEquipmentLevel: 200, starforce: '22',
+    potential_option_grade: '레전드리', potential_option_1: '마력 : +12%',
+    potential_option_2: 'INT : +13%', potential_option_3: '공격력 : +12%',
+  }];
+  const result = buildRecommendationPlan({ goal, mode: 'all', budgetMesos: null, combat, characterJob: '레테', items });
+  const potential = result.equipmentRecommendations.find((entry) => entry.recommendationKind === 'potential');
+  assert.equal(potential.current.effectiveLines, 1);
+});
+
+test('starforce targets are sorted by expected cost per star and budget is applied', async () => {
+  const rules = await loadUpgradeRules();
+  const targets = { version: 'cost-v1', updatedAt: '2026-09-14', rules: [{
+    id: 'target-22', slots: ['모자', '장갑'], minGoalOrder: 0, maxGoalOrder: 999,
+    target: { starforce: 22 }, reason: '비용 정렬 검증',
+  }] };
+  const costItems = [
+    { item_name: '17성 모자', item_equipment_slot: '모자', baseEquipmentLevel: 200, starforce: '17' },
+    { item_name: '18성 장갑', item_equipment_slot: '장갑', baseEquipmentLevel: 200, starforce: '18' },
+  ];
+  const all = buildRecommendationPlan({ goal, mode: 'all', budgetMesos: null, combat, characterJob: '히어로', items: costItems, rules, equipmentTargets: targets });
+  assert.ok(all.equipmentRecommendations[0].expectedMeso > 0);
+  assert.ok(all.equipmentRecommendations[0].expectedMesoPerStar <= all.equipmentRecommendations[1].expectedMesoPerStar);
+
+  const budget = all.equipmentRecommendations[0].expectedMeso;
+  const limited = buildRecommendationPlan({ goal, mode: 'budget', budgetMesos: budget, combat, characterJob: '히어로', items: costItems, rules, equipmentTargets: targets });
+  assert.deepEqual(limited.equipmentRecommendations.map((entry) => entry.itemName), [all.equipmentRecommendations[0].itemName]);
+  assert.equal(limited.equipmentTargetTrace.budgetApplied, true);
+  assert.equal(limited.equipmentTargetTrace.budgetRemaining, 0);
 });
 
 test('equipment family targets evaluate every matching equipped item', () => {
@@ -118,18 +170,18 @@ test('equipment family targets evaluate every matching equipped item', () => {
 test('job equipment observations are exposed as reference data, not efficiency rankings', () => {
   const equipmentBaselines = {
     version: '2026-09-10-overall-job-v2', date: '2026-09-10',
-    sampling: { strategy: 'job-stratified', samplesPerJob: 3, requestedJobs: 48, succeededJobs: 48 },
-    jobs: { 히어로: { sampleSize: 3, slots: { 모자: [
-      { itemName: '에테르넬 나이트헬름', count: 2, slotItemShare: 2 / 3 },
-      { itemName: '하이네스 워리어헬름', count: 1, slotItemShare: 1 / 3 },
+    sampling: { strategy: 'job-stratified', samplesPerJob: 8, requestedJobs: 48, succeededJobs: 48 },
+    jobs: { 히어로: { sampleSize: 8, slots: { 모자: [
+      { itemName: '에테르넬 나이트헬름', count: 6, slotItemShare: 6 / 8 },
+      { itemName: '하이네스 워리어헬름', count: 2, slotItemShare: 2 / 8 },
     ] } } },
   };
   const result = buildRecommendationPlan({ goal, mode: 'all', budgetMesos: null, combat, characterJob: '히어로', items, equipmentBaselines });
   assert.deepEqual(result.jobEquipmentReference, {
-    status: 'available', job: '히어로', sampleSize: 3, date: '2026-09-10', version: '2026-09-10-overall-job-v2',
+    status: 'available', job: '히어로', sampleSize: 8, date: '2026-09-10', version: '2026-09-10-overall-job-v2',
     slots: [{ slot: '모자', equippedItems: ['모자'], observed: [
-      { itemName: '에테르넬 나이트헬름', count: 2, slotItemShare: 2 / 3 },
-      { itemName: '하이네스 워리어헬름', count: 1, slotItemShare: 1 / 3 },
+      { itemName: '에테르넬 나이트헬름', count: 6, slotItemShare: 6 / 8 },
+      { itemName: '하이네스 워리어헬름', count: 2, slotItemShare: 2 / 8 },
     ] }],
   });
   assert.equal('efficiency' in result.jobEquipmentReference.slots[0], false);
@@ -137,8 +189,8 @@ test('job equipment observations are exposed as reference data, not efficiency r
 
 test('job equipment observations preserve duplicate and non-starforce equipment independently of combat readiness', () => {
   const equipmentBaselines = {
-    version: 'observed-v2', date: '2026-09-10', sampling: { strategy: 'job-stratified', samplesPerJob: 3 },
-    jobs: { 히어로: { sampleSize: 3, slots: { 반지: [{ itemName: '거대한 공포', count: 3, slotItemShare: 0.25 }] } } },
+    version: 'observed-v2', date: '2026-09-10', sampling: { strategy: 'job-stratified', samplesPerJob: 8 },
+    jobs: { 히어로: { sampleSize: 8, slots: { 반지: [{ itemName: '거대한 공포', count: 8, slotItemShare: 0.25 }] } } },
   };
   const rings = [
     { item_name: '가디언 엔젤 링', item_equipment_slot: '반지1', starforce: '18' },

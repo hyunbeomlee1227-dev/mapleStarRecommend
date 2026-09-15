@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { supportsStarforce } from '../shared/equipment.js';
-import { calculateNextStarCost } from './starforce.js';
+import { calculateNextStarCost, calculateStarforceTargetCost } from './starforce.js';
 
 const itemSchema = z.object({
   item_name: z.string().min(1).max(200),
@@ -11,6 +11,9 @@ const itemSchema = z.object({
   special_ring_level: z.union([z.string().max(10), z.number().finite()]).nullable().optional(),
   potential_option_grade: z.string().max(30).nullable().optional(),
   additional_potential_option_grade: z.string().max(30).nullable().optional(),
+  potential_option_1: z.string().max(500).nullable().optional(),
+  potential_option_2: z.string().max(500).nullable().optional(),
+  potential_option_3: z.string().max(500).nullable().optional(),
 });
 
 export const recommendationRequestSchema = z.object({
@@ -32,7 +35,8 @@ export const recommendationRequestSchema = z.object({
 function jobEquipmentReference(characterJob, items, equipmentBaselines) {
   if (!characterJob || equipmentBaselines?.sampling?.strategy !== 'job-stratified') return { status: 'unavailable' };
   const profile = equipmentBaselines.jobs?.[characterJob];
-  if (!profile || profile.sampleSize < equipmentBaselines.sampling.samplesPerJob) return { status: 'unavailable' };
+  const minimumSamples = Math.max(8, equipmentBaselines.sampling.samplesPerJob);
+  if (!profile || profile.sampleSize < minimumSamples) return { status: 'unavailable', minimumSamples };
   const equippedBySlot = new Map();
   for (const item of items) {
     const slot = item.item_equipment_slot.replace(/\d+$/, '');
@@ -51,6 +55,60 @@ function jobEquipmentReference(characterJob, items, equipmentBaselines) {
 }
 
 const gradeIds = { '레어': 'rare', '에픽': 'epic', '유니크': 'unique', '레전드리': 'legendary' };
+
+const magicJobs = new Set([
+  '아크메이지(불,독)', '아크메이지(썬,콜)', '비숍', '플레임위자드', '에반', '루미너스',
+  '배틀메이지', '일리움', '라라', '키네시스', '레테',
+]);
+const dexJobs = new Set([
+  '보우마스터', '신궁', '패스파인더', '윈드브레이커', '메르세데스', '와일드헌터',
+  '메카닉', '캡틴', '엔젤릭버스터', '카인',
+]);
+const intJobs = magicJobs;
+const lukJobs = new Set(['나이트로드', '섀도어', '듀얼블레이더', '나이트워커', '팬텀', '카데나', '칼리', '호영']);
+
+function mainStatsForJob(job) {
+  if (job === '데몬어벤져') return ['최대 HP'];
+  if (job === '제논') return ['STR', 'DEX', 'LUK', '올스탯'];
+  if (intJobs.has(job)) return ['INT', '올스탯'];
+  if (dexJobs.has(job)) return ['DEX', '올스탯'];
+  if (lukJobs.has(job)) return ['LUK', '올스탯'];
+  return ['STR', '올스탯'];
+}
+
+function effectivePotentialLine(line, item, job) {
+  if (!line || /아이템 드롭률|메소 획득량|경험치/.test(line)) return false;
+  const slot = item.item_equipment_slot.replace(/\d+$/, '');
+  if (['무기', '보조무기', '엠블렘'].includes(slot)) {
+    const attack = magicJobs.has(job) ? '마력' : '공격력';
+    return line.includes('보스 몬스터 공격 시 데미지')
+      || line.includes('몬스터 방어율 무시')
+      || new RegExp(`${attack}[^%]*\\+\\d+%`).test(line);
+  }
+  if (slot === '장갑' && /크리티컬 데미지[^%]*\+\d+%/.test(line)) return true;
+  if (slot === '모자' && /스킬 재사용 대기시간.*감소/.test(line)) return true;
+  return mainStatsForJob(job).some((stat) => new RegExp(`${stat}[^%]*\\+\\d+%`).test(line));
+}
+
+function potentialThreeLineRecommendations(items, characterJob) {
+  return items.flatMap((item) => {
+    if (!item.potential_option_grade || item.special_ring_level) return [];
+    const lines = [item.potential_option_1, item.potential_option_2, item.potential_option_3];
+    const effectiveLines = lines.filter((line) => effectivePotentialLine(line, item, characterJob)).length;
+    if (item.potential_option_grade === '레전드리' && effectiveLines >= 3) return [];
+    const actions = [];
+    if (item.potential_option_grade !== '레전드리') actions.push(`윗잠 ${item.potential_option_grade} -> 레전드리`);
+    actions.push(`보스전 유효 ${effectiveLines}줄 -> 3줄`);
+    return [{
+      ruleId: 'boss-potential-three-lines', sourceKind: 'combat-option-rule', recommendationKind: 'potential',
+      itemName: item.item_name, slot: item.item_equipment_slot,
+      current: { potentialGrade: item.potential_option_grade, effectiveLines },
+      target: { potentialGrade: '레전드리', effectiveLines: 3 }, actions,
+      expectedMeso: null, expectedMesoPerStar: null,
+      reason: '사냥용 옵션을 제외하고 직업 주스탯과 무기류 보스전 옵션을 기준으로 판정한 윗잠 3줄 목표입니다.',
+    }];
+  });
+}
 
 function potentialTierUpgrades(items, rules) {
   if (!rules?.capabilities?.potentialTierUpgrade?.usableForRecommendation) return [];
@@ -108,8 +166,9 @@ function starforceRisks(items, rules) {
   });
 }
 
-function equipmentRecommendations(goal, items, equipmentTargets) {
-  if (!Number.isInteger(goal?.order) || !equipmentTargets?.rules) return [];
+function equipmentRecommendations(goal, items, equipmentTargets, rules, characterJob) {
+  const potential = potentialThreeLineRecommendations(items, characterJob);
+  if (!Number.isInteger(goal?.order) || !equipmentTargets?.rules) return potential;
   const candidates = equipmentTargets.rules.flatMap((rule) => {
     if (goal.order < rule.minGoalOrder || goal.order > rule.maxGoalOrder) return [];
     const matchedItems = items.filter((candidate) => {
@@ -132,14 +191,24 @@ function equipmentRecommendations(goal, items, equipmentTargets) {
         actions.push(`스타포스 ${currentStarforce}성 -> ${rule.target.starforce}성`);
       }
       if (!actions.length) return [];
+      const cost = item.baseEquipmentLevel && rule.target.starforce != null
+        ? calculateStarforceTargetCost({
+          level: item.baseEquipmentLevel, currentStar: currentStarforce, targetStar: rule.target.starforce,
+          outcomes: rules?.starforceOutcomes, restoreResources: rules?.starforceRestoreResources?.levels,
+        })
+        : null;
       return [{
         ruleId: rule.id,
         sourceKind: 'curated-rule',
+        recommendationKind: 'starforce',
         itemName: item.item_name,
         slot: item.item_equipment_slot,
         current: { starforce: currentStarforce },
         target: rule.target,
         actions,
+        expectedMeso: cost?.expectedMeso ?? null,
+        expectedRecoveryCopies: cost?.expectedRecoveryCopies ?? null,
+        expectedMesoPerStar: cost?.expectedMesoPerStar ?? null,
         reason: rule.reason,
       }];
     });
@@ -150,7 +219,13 @@ function equipmentRecommendations(goal, items, equipmentTargets) {
     const previous = bestByItem.get(key);
     if (!previous || (candidate.target.starforce ?? -1) > (previous.target.starforce ?? -1)) bestByItem.set(key, candidate);
   }
-  return [...bestByItem.values()];
+  const starforce = [...bestByItem.values()].sort((left, right) => {
+    if (left.expectedMesoPerStar === null && right.expectedMesoPerStar === null) return 0;
+    if (left.expectedMesoPerStar === null) return 1;
+    if (right.expectedMesoPerStar === null) return -1;
+    return left.expectedMesoPerStar - right.expectedMesoPerStar;
+  });
+  return [...starforce, ...potential];
 }
 
 export function buildRecommendationPlan({ goal, mode, budgetMesos, combat, characterJob, items, rules, equipmentTargets, equipmentBaselines }) {
@@ -169,19 +244,29 @@ export function buildRecommendationPlan({ goal, mode, budgetMesos, combat, chara
   const blockers = rules
     ? Object.entries(rules.capabilities).filter(([, capability]) => !capability.usableForRecommendation).map(([id]) => id)
     : ['upgrade-rules', 'job-damage-model'];
+  const allRecommendations = equipmentRecommendations(goal, items, equipmentTargets, rules, characterJob);
+  let remainingBudget = budgetMesos;
+  const selectedRecommendations = mode === 'budget'
+    ? allRecommendations.filter((candidate) => {
+      if (candidate.expectedMeso === null || candidate.expectedMeso > remainingBudget) return false;
+      remainingBudget -= candidate.expectedMeso;
+      return true;
+    })
+    : allRecommendations;
   return {
     status: 'model-pending',
-    message: '강화 후보 정보는 준비됐지만 비용과 성능 모델 검증 전이라 순위를 제공하지 않습니다.',
+    message: '스타포스는 목표 별 1개당 기대 메소가 낮은 순서입니다. 최종뎀 효율은 아직 반영하지 않습니다.',
     mode,
     budgetMesos,
     coverage,
     blockers,
-    equipmentRecommendations: equipmentRecommendations(goal, items, equipmentTargets),
+    equipmentRecommendations: selectedRecommendations,
     equipmentTargetTrace: {
       version: equipmentTargets?.version ?? null,
       updatedAt: equipmentTargets?.updatedAt ?? null,
       sourceKind: 'curated-rule',
-      budgetApplied: false,
+      budgetApplied: mode === 'budget',
+      budgetRemaining: mode === 'budget' ? remainingBudget : null,
     },
     jobEquipmentReference: equipmentReference,
     supportedCalculations: {

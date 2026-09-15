@@ -60,12 +60,12 @@ test('equipment lookup merges every current cash item and preserves cash metadat
   assert.deepEqual(result.body.items.map(({ item_name, item_kind }) => ({ item_name, item_kind })), [
     { item_name: '검증 장갑', item_kind: 'equipment' },
     { item_name: '별빛 모자', item_kind: 'cash' },
-    { item_name: '추가 외형 망토', item_kind: 'cash' },
   ]);
   assert.deepEqual(result.body.items[1].cash_item_option, [{ option_type: '캐릭터 최대 HP 증가', option_value: '250' }]);
   assert.equal(result.body.items[1].cash_item_label, '스페셜라벨');
   assert.deepEqual(result.body.items[1].cash_item_coloring_prism, { color_range: '전체', hue: 10, saturation: 20, value: 30 });
   assert.equal(result.body.items[1].item_icon, 'https://open.api.nexon.com/static/maplestory/item/cash.png');
+  assert.equal(result.body.items.some((item) => item.item_name === '추가 외형 망토'), false);
 });
 
 test('equipment lookup preserves duplicate parts and Maple upgrade metadata', async () => {

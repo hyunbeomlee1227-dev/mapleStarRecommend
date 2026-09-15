@@ -93,3 +93,24 @@ export function calculateNextStarCost({ level, star, outcome, outcomes, restoreR
     expectedRecoveryCopies: outcome.destroyProbability * resource.requiredCopies / outcome.successProbability,
   };
 }
+
+export function calculateStarforceTargetCost({ level, currentStar, targetStar, outcomes, restoreResources }) {
+  if (!Number.isInteger(currentStar) || !Number.isInteger(targetStar) || targetStar <= currentStar) return null;
+  let expectedMeso = 0;
+  let expectedRecoveryCopies = 0;
+  for (let star = currentStar; star < targetStar; star += 1) {
+    const outcome = outcomes?.[String(star)];
+    if (!outcome) return null;
+    const step = calculateNextStarCost({ level, star, outcome, outcomes, restoreResources });
+    if (step.expectedMesoWithOwnedRecoveryItems === null || step.expectedRecoveryCopies === null) return null;
+    expectedMeso += step.expectedMesoWithOwnedRecoveryItems;
+    expectedRecoveryCopies += step.expectedRecoveryCopies;
+  }
+  const starsGained = targetStar - currentStar;
+  return {
+    expectedMeso: Math.round(expectedMeso),
+    expectedRecoveryCopies,
+    starsGained,
+    expectedMesoPerStar: Math.round(expectedMeso / starsGained),
+  };
+}

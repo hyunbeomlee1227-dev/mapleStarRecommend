@@ -23,7 +23,7 @@ const apiKey = process.env.NEXON_API_KEY?.trim();
 if (!apiKey) throw new Error('NEXON_API_KEY is not configured');
 
 const date = dateArgument();
-const samplesPerJob = integerArgument('samples-per-job', 3, 3, 10);
+const samplesPerJob = integerArgument('samples-per-job', 8, 3, 9);
 const output = resolve('data/equipment-baselines.json');
 const service = createNexonService({
   apiKey,
