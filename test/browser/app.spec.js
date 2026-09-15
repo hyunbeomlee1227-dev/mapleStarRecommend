@@ -1,5 +1,78 @@
 import { test, expect } from '@playwright/test';
 
+test('potential recommendation opens the matching target calculator and detail reopens its defaults', async ({ page }, info) => {
+  let targetPayload;
+  await page.route('**/api/rules/potential-target-probability', (route) => {
+    targetPayload = route.request().postDataJSON();
+    return route.fulfill({ json: { probability: 0.001, expectedResets: 1000, expectedMeso: 450_000_000, alreadySatisfied: false } });
+  });
+  await page.route('**/api/rules/potential-options?*', (route) => route.fulfill({ json: {
+    grade: '레전드리', part: '무기', levelBand: '120~200', cached: false,
+    sourceUrl: 'https://maplestory.nexon.com/Guide/OtherProbability/cube/black',
+    lines: [1, 2, 3].map(() => [{ option: '공격력 +12%', probability: 0.1 }]),
+    tierRules: { unique: { nextGrade: 'legendary', successProbability: 0.007, guaranteeAttempts: 214 } },
+  } }));
+  await page.goto('/');
+  const candidate = page.locator('.equipment-recommendation-list article').filter({ hasText: '에디셔널' }).first();
+  await candidate.getByRole('button', { name: '목표 비용 계산' }).click();
+  const dialog = page.getByRole('dialog', { name: '공식 잠재 옵션표' });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole('button', { name: '에디셔널', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(dialog.getByRole('button', { name: '3줄 이상' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(dialog.getByRole('heading', { name: '레전드리 목표 옵션 확률' })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: '목표 확률 계산' })).toBeDisabled();
+  await expect(dialog.locator('.potential-meta')).toContainText('아케인셰이드 투핸드소드');
+  await dialog.getByRole('checkbox', { name: '공격력 +12%' }).check();
+  await dialog.getByRole('button', { name: '목표 확률 계산' }).click();
+  await expect(dialog.getByLabel('잠재 목표 계산 결과')).toContainText('450,000,000 메소');
+  expect(targetPayload.type).toBe('additional');
+  expect(targetPayload.grade).toBe('unique');
+  expect(targetPayload.targetGrade).toBe('legendary');
+  expect(targetPayload.minimumMatches).toBe(3);
+  expect(targetPayload.targetOptions).toEqual(['공격력 +12%']);
+  await dialog.screenshot({ path: `test-results/recommendation-calculator-${info.project.name}.png` });
+  expect(await dialog.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+  await page.getByLabel('공식 잠재 옵션표 닫기').click();
+  if (info.project.name === 'mobile') await page.getByRole('button', { name: '아케인셰이드 투핸드소드 상세 보기' }).click();
+  await page.getByRole('button', { name: '공식 잠재 옵션표 보기' }).click();
+  await expect(dialog.getByRole('button', { name: '일반', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(dialog.getByRole('button', { name: '1줄 이상' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(dialog.getByLabel('잠재 목표 계산 결과')).toHaveCount(0);
+});
+
+for (const [label, level] of [['null', null], ['empty', ''], ['whitespace', '  ']]) {
+  test(`missing ${label} equipment level disables recommendation calculator`, async ({ page }) => {
+    await page.route('**/api/character?*', async (route) => {
+      const { demo } = await import('../../src/demo.js');
+      const items = demo.items.map((item, index) => index === 0 ? {
+        ...item, item_total_option: { ...item.item_total_option, base_equipment_level: level },
+        item_base_option: { ...item.item_base_option, base_equipment_level: level },
+      } : item);
+      await route.fulfill({ json: { ...demo, source: 'nexon', items } });
+    });
+    await page.goto('/');
+    await page.getByLabel('캐릭터 이름', { exact: true }).fill('누락검증');
+    await page.getByRole('button', { name: '캐릭터 조회', exact: true }).click();
+    await expect(page.locator('.demo-banner')).toHaveCount(0);
+    const candidate = page.locator('.equipment-recommendation-list article').filter({ hasText: '아케인셰이드 투핸드소드' }).filter({ hasText: '에디셔널' });
+    await expect(candidate.getByRole('button', { name: '목표 비용 계산' })).toBeDisabled();
+  });
+}
+
+test('unmatched potential recommendation cannot open a calculator', async ({ page }) => {
+  await page.route('**/api/recommendations', (route) => route.fulfill({ json: {
+    status: 'model-pending', equipmentRecommendations: [{
+      ruleId: 'unmatched', itemName: '조회 불가 장비', slot: '모자', recommendationKind: 'potential',
+      potentialType: 'additional', actions: ['에디셔널 3줄 목표'], expectedMeso: null, reason: '조회 데이터 확인 필요',
+    }],
+  } }));
+  await page.goto('/');
+  const button = page.getByRole('button', { name: '목표 비용 계산' });
+  await expect(button).toBeDisabled();
+  await expect(button).toHaveAttribute('title', '장비 부위·레벨·잠재 등급 확인 필요');
+  await expect(page.getByRole('dialog', { name: '공식 잠재 옵션표' })).not.toBeVisible();
+});
+
 test('budget results explain exclusions without promising success', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: '예산 내 추천' }).click();

@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { Search, Star, ArrowUpRight, ArrowUpDown, ChevronRight, X, Trash2, CircleHelp, Layers3, Swords, Shield, Gem, Clock3, SlidersHorizontal, AlertCircle, LoaderCircle, FlaskConical, Target, Wrench } from 'lucide-react';
 import { demo } from './demo';
 import { readRecent, saveRecent, clearRecent } from './storage';
-import PotentialOptionsDialog from './PotentialOptionsDialog';
+import PotentialOptionsDialog, { potentialQueryFor } from './PotentialOptionsDialog';
 import { PotentialView, SetsView, StarforceView, UpgradeView, supportsStarforce } from './AnalysisViews';
 import { isCashItem, supportsEnhancement } from '../shared/equipment';
 import EquipmentTooltip from './EquipmentTooltip';
@@ -12,6 +12,12 @@ import './style.css';
 const grades = { 레전드리: 'legendary', 유니크: 'unique', 에픽: 'epic', 레어: 'rare' };
 const mesos = new Intl.NumberFormat('ko-KR');
 function Badge({ grade }) { return <span className={`grade ${grades[grade] || ''}`}>{grade || '정보 없음'}</span>; }
+function PotentialRecommendationAction({ candidate, items, onOpen }) {
+  if (candidate.recommendationKind !== 'potential') return null;
+  const item = items.find((item) => item.item_name === candidate.itemName && item.item_equipment_slot === candidate.slot);
+  const available = Boolean(potentialQueryFor(item, candidate.potentialType));
+  return <button className="recommendation-calculate" disabled={!available} title={available ? '공식 목표 옵션 선택 및 비용 계산' : '장비 부위·레벨·잠재 등급 확인 필요'} onClick={() => onOpen(item, candidate)}><Target size={14} />목표 비용 계산</button>;
+}
 function PotentialRecommendationEvidence({ candidate }) {
   if (!candidate.lineAssessments) return null;
   const labels = { effective: '유효 후보', farming: '사냥 옵션', unverified: '미판정', missing: '미제공' };
@@ -47,6 +53,7 @@ function App() {
   const [recommendation, setRecommendation] = useState({ status: 'loading', message: '추천 조건을 준비하는 중입니다.' });
   const [rules, setRules] = useState({ version: null, updatedAt: null, capabilities: {}, summary: { verified: 0, total: 0 } });
   const [potentialOptionsOpen, setPotentialOptionsOpen] = useState(false);
+  const [initialPotentialTarget, setInitialPotentialTarget] = useState(null);
   const [potentialReturnToDetail, setPotentialReturnToDetail] = useState(false);
   const abort = useRef(null);
   const helpRef = useRef(null);
@@ -168,8 +175,15 @@ function App() {
     setGoalId((matchingDifficulty ?? candidates.at(-1))?.id ?? '');
   }
   function openPotentialOptions() {
+    setInitialPotentialTarget(null);
     setPotentialReturnToDetail(mobileDetail);
     if (mobileDetail) setMobileDetail(false);
+    setPotentialOptionsOpen(true);
+  }
+  function openRecommendationPotential(item, candidate) {
+    setSelected(item);
+    setInitialPotentialTarget({ type: candidate.potentialType, grade: 'legendary', minimumMatches: 3 });
+    setPotentialReturnToDetail(false);
     setPotentialOptionsOpen(true);
   }
   function closePotentialOptions() {
@@ -200,7 +214,7 @@ function App() {
       <section className="recommendation-status" aria-label="강화 추천 조건"><div className="recommendation-heading"><div className="status-icon"><SlidersHorizontal size={21} /></div><div><h3>{selectedGoal ? `${selectedGoal.boss} ${selectedGoal.difficulty} 기준 강화 우선순위` : '강화 우선순위'}</h3><p>{assessment.message}</p><p className="model-message">{recommendation.message}</p></div></div><div className="recommendation-inputs"><div className="mode-control" role="group" aria-label="추천 범위"><button className={recommendationMode === 'all' ? 'active' : ''} aria-pressed={recommendationMode === 'all'} onClick={() => setRecommendationMode('all')}>전체 추천</button><button className={recommendationMode === 'budget' ? 'active' : ''} aria-pressed={recommendationMode === 'budget'} onClick={() => setRecommendationMode('budget')}>예산 내 추천</button></div><label className="benefit-select"><span>MVP</span><select aria-label="MVP 등급" value={mvpGrade} onChange={(event) => setMvpGrade(event.target.value)}><option value="none">없음</option><option value="silver">실버 3%</option><option value="gold">골드 5%</option><option value="diamond">다이아 10%</option><option value="red">레드 10%</option><option value="black">블랙 10%</option></select></label><label className="benefit-toggle"><input aria-label="PC방 할인" type="checkbox" checked={pcRoom} onChange={(event) => setPcRoom(event.target.checked)} /><span>PC방 5%</span></label><label className="benefit-toggle"><input aria-label="파괴 방지" type="checkbox" checked={safeguard} onChange={(event) => setSafeguard(event.target.checked)} /><span>15~17성 파괴 방지</span></label>{recommendationMode === 'budget' && <label className="budget-input"><span>예산</span><input aria-label="예산 (억 메소)" type="number" min="0.1" max="90000000" step="0.1" inputMode="decimal" value={budget} onChange={(event) => setBudget(event.target.value)} /><span>억 메소</span></label>}</div>{recommendation.coverage && <div className="coverage" aria-label="분석 가능 장비"><span>스타포스 {recommendation.coverage.starforce}</span><span>잠재 {recommendation.coverage.potential}</span><span>에디셔널 {recommendation.coverage.additionalPotential}</span>{recommendation.equipmentTargetTrace?.starforceDiscountRate > 0 && <span>17성까지 {(recommendation.equipmentTargetTrace.starforceDiscountRate * 100).toFixed(0)}% 할인</span>}{recommendation.equipmentTargetTrace?.starforceConditions?.safeguard && <span>15~17성 파괴 방지</span>}</div>}<span className="pending-badge">{recommendation.status === 'loading' ? '확인 중' : '비용순 추천 완료'}</span></section>
       <section className="equipment-recommendations" aria-label="보스 장비 강화 우선순위"><div className="equipment-recommendation-heading"><div><span>BOSS UPGRADE PRIORITY</span><h3>보스 장비 강화 우선순위</h3></div>{recommendationMode === 'budget' && <span className="budget-not-applied-token">예산 적용</span>}</div>
         {budgetSummary && <div className="recommendation-note" aria-label="예산 추천 집계"><p>후보 {budgetSummary.totalCandidates}개 중 {budgetSummary.selectedCandidates}개 선택 · 기대 지출 {mesos.format(budgetSummary.expectedSpend)} 메소 · 남은 예산 {mesos.format(budgetRemaining)} 메소</p><p>비용 미확인 {budgetSummary.unknownCostCandidates}개 · 남은 예산 초과 {budgetSummary.overBudgetCandidates}개 제외</p><p>비용 미확인 후보는 전체 추천에서 확인할 수 있습니다. 기대 비용은 평균값이며 실제 지출이 예산을 넘을 수 있습니다. 예산 내 성공을 보장하지 않습니다. 기대 비용은 예산 내 성공 확률이 아니며, 실제 성공 확률은 아직 검증되지 않았습니다.</p></div>}
-        {recommendation.status === 'loading' ? <p className="recommendation-empty">장비 목표를 확인하는 중입니다.</p> : equipmentRecommendations.length ? <div className="equipment-recommendation-list">{equipmentRecommendations.map((item) => <article key={`${item.ruleId}:${item.slot}:${item.itemName}`}><div className="equipment-recommendation-item"><div><small>{item.slot}</small><strong>{item.itemName}</strong></div><span>{item.actions.join(', ')}</span></div>{item.expectedMeso !== null && <div className="recommendation-cost"><strong>예상 {mesos.format(item.expectedMeso)} 메소</strong><span>별 1개당 {mesos.format(item.expectedMesoPerStar)} 메소</span>{item.expectedRecoveryCopies > 0 && <span>기대 소모 장비 {item.expectedRecoveryCopies.toFixed(2)}개</span>}</div>}<p>{item.reason}</p><PotentialRecommendationEvidence candidate={item} /></article>)}</div> : <p className="recommendation-empty">현재 조건과 예산에서 추천할 강화가 없습니다.</p>}
+        {recommendation.status === 'loading' ? <p className="recommendation-empty">장비 목표를 확인하는 중입니다.</p> : equipmentRecommendations.length ? <div className="equipment-recommendation-list">{equipmentRecommendations.map((item) => <article key={`${item.ruleId}:${item.slot}:${item.itemName}`}><div className="equipment-recommendation-item"><div><small>{item.slot}</small><strong>{item.itemName}</strong></div><span>{item.actions.join(', ')}</span></div>{item.expectedMeso !== null && <div className="recommendation-cost"><strong>예상 {mesos.format(item.expectedMeso)} 메소</strong><span>별 1개당 {mesos.format(item.expectedMesoPerStar)} 메소</span>{item.expectedRecoveryCopies > 0 && <span>기대 소모 장비 {item.expectedRecoveryCopies.toFixed(2)}개</span>}</div>}<p>{item.reason}</p><PotentialRecommendationEvidence candidate={item} /><PotentialRecommendationAction candidate={item} items={data.items} onOpen={openRecommendationPotential} /></article>)}</div> : <p className="recommendation-empty">현재 조건과 예산에서 추천할 강화가 없습니다.</p>}
         <p className="recommendation-note">{recommendation.equipmentTargetTrace?.version || '목표 규칙 불러오는 중'} · 스타포스는 보유 스페어 기준 목표 별당 기대 메소 순입니다. MVP·PC방 할인은 17성 도달까지 기본 강화 비용에만 적용됩니다. 파괴 방지는 15~17성에서 할인 전 기본 비용의 200%를 추가하며 최종뎀 효율은 아직 적용되지 않습니다.</p>
       </section>
       <section className="job-equipment-reference" aria-label="같은 직업 장비 관측"><div className="equipment-recommendation-heading"><div><span>OFFICIAL RANKING OBSERVATION</span><h3>{data.character.job} 장비 사용 참고</h3></div>{jobEquipmentReference?.status === 'available' && <span className="observation-token">표본 {jobEquipmentReference.sampleSize}명</span>}</div>
@@ -212,7 +226,7 @@ function App() {
     </main>
     <dialog ref={helpRef} onClose={() => setHelp(false)} className="help-dialog"><div className="dialog-heading"><h2>서비스 정보</h2><button className="icon-button" aria-label="서비스 정보 닫기" onClick={() => setHelp(false)}><X /></button></div><p>회원가입 없이 캐릭터 장비를 확인할 수 있습니다. 조회 정보는 완료된 전일 데이터를 기준으로 하며, 오전 2시 이전에는 전전일 데이터를 사용합니다.</p><p>최근 조회한 이름은 이 브라우저에 최대 29일간 저장되며 직접 삭제할 수 있습니다. 예시 캐릭터는 실제 게임 데이터가 아닙니다.</p><p>잠재 등급 상승, 공식 줄별 옵션 확률과 기본 조건의 스타포스 기대 비용은 참고값을 제공합니다. 직업별 최종뎀 순위, 구매 비교와 이미지 분석은 아직 준비 중입니다.</p></dialog>
     <dialog ref={detailRef} onClose={() => setMobileDetail(false)} className="mobile-detail"><div className="dialog-heading"><span>장비 정보</span><button className="icon-button" aria-label="장비 상세 닫기" onClick={() => setMobileDetail(false)}><X /></button></div>{detail}</dialog>
-    <PotentialOptionsDialog item={selected} open={potentialOptionsOpen} onClose={closePotentialOptions} />
+    <PotentialOptionsDialog item={selected} open={potentialOptionsOpen} initialTarget={initialPotentialTarget} onClose={closePotentialOptions} />
   </>;
 }
 

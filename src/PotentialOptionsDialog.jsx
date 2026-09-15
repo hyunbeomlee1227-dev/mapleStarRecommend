@@ -12,7 +12,9 @@ export function potentialQueryFor(item, type, gradeOverride = null) {
   const equipmentPart = item?.item_equipment_part?.replace(/\d+$/, '');
   let part = partSlugs[equipmentPart];
   if (equipmentPart === '보조무기' || item?.item_equipment_slot === '보조무기') part = /포스실드|소울링/.test(`${item.item_name} ${item.item_equipment_slot}`) ? 'forceShield' : 'secondary';
-  const level = Number(item?.item_total_option?.base_equipment_level ?? item?.item_base_option?.base_equipment_level);
+  const rawLevel = item?.item_total_option?.base_equipment_level ?? item?.item_base_option?.base_equipment_level;
+  if (!['number', 'string'].includes(typeof rawLevel) || String(rawLevel).trim() === '') return null;
+  const level = Number(rawLevel);
   return grade && part && Number.isInteger(level) && level >= 0 && level <= 250 ? { type, grade, part, level } : null;
 }
 
@@ -29,7 +31,7 @@ function currentPotentialOptions(item, type) {
 const mesos = new Intl.NumberFormat('ko-KR');
 const percent = (value) => `${(value * 100).toFixed(8).replace(/0+$/, '').replace(/\.$/, '')}%`;
 
-export default function PotentialOptionsDialog({ item, open, onClose }) {
+export default function PotentialOptionsDialog({ item, open, initialTarget = null, onClose }) {
   const dialogRef = useRef(null);
   const calculationControllerRef = useRef(null);
   const [type, setType] = useState('regular');
@@ -44,12 +46,13 @@ export default function PotentialOptionsDialog({ item, open, onClose }) {
 
   useEffect(() => {
     if (!open) return;
-    const initialType = regularAvailable ? 'regular' : 'additional';
+    const initialType = initialTarget && potentialQueryFor(item, initialTarget.type)
+      ? initialTarget.type : regularAvailable ? 'regular' : 'additional';
     setType(initialType);
-    setSelectedTargetGrade(null);
+    setSelectedTargetGrade(initialTarget?.grade ?? null);
     setTierRemainingAttempts({});
     dialogRef.current?.showModal();
-  }, [open, item, regularAvailable]);
+  }, [open, item, regularAvailable, initialTarget]);
 
   useEffect(() => {
     if (!open) return;
@@ -62,14 +65,14 @@ export default function PotentialOptionsDialog({ item, open, onClose }) {
     setResult({ status: 'loading' });
     calculationControllerRef.current?.abort();
     setTargetOptions([]);
-    setMinimumMatches(1);
+    setMinimumMatches(initialTarget?.minimumMatches ?? 1);
     setCalculation({ status: 'idle' });
     fetch(`/api/rules/potential-options?${new URLSearchParams(query)}`, { signal: controller.signal })
       .then(async (response) => { const body = await response.json(); if (!response.ok) throw new Error(body.message); return body; })
       .then((body) => setResult({ status: 'ready', body }))
       .catch((error) => { if (!controller.signal.aborted) setResult({ status: 'error', message: error.message || '공식 옵션표를 불러오지 못했습니다.' }); });
     return () => controller.abort();
-  }, [open, item, type, selectedTargetGrade]);
+  }, [open, item, type, selectedTargetGrade, initialTarget]);
 
   function close() {
     calculationControllerRef.current?.abort();
