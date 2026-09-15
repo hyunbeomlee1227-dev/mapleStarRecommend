@@ -15,6 +15,9 @@ const itemSchema = z.object({
   potential_option_1: z.string().max(500).nullable().optional(),
   potential_option_2: z.string().max(500).nullable().optional(),
   potential_option_3: z.string().max(500).nullable().optional(),
+  additional_potential_option_1: z.string().max(500).nullable().optional(),
+  additional_potential_option_2: z.string().max(500).nullable().optional(),
+  additional_potential_option_3: z.string().max(500).nullable().optional(),
 });
 const starforceConditionsSchema = z.object({
   mvpGrade: z.enum(['none', 'silver', 'gold', 'diamond', 'red', 'black']),
@@ -107,7 +110,7 @@ function mainStatsForJob(job) {
   return ['STR', '올스탯'];
 }
 
-function effectivePotentialLine(line, item, job) {
+function effectivePotentialLine(line, item, job, potentialType = 'regular') {
   if (!line || /아이템 드롭률|메소 획득량|경험치/.test(line)) return false;
   const slot = item.item_equipment_slot.replace(/\d+$/, '');
   if (['무기', '보조무기', '엠블렘'].includes(slot)) {
@@ -116,6 +119,11 @@ function effectivePotentialLine(line, item, job) {
       || line.includes('몬스터 방어율 무시')
       || new RegExp(`${attack}[^%]*\\+\\d+%`).test(line);
   }
+  if (potentialType === 'additional') {
+    const attack = magicJobs.has(job) ? '마력' : '공격력';
+    if (new RegExp(`^${attack}\\s*:\\s*\\+[1-9]\\d*%?$`).test(line.trim())) return true;
+    if (mainStatsForJob(job).some((stat) => new RegExp(`^캐릭터 기준 \\d+레벨 당 ${stat}\\s*:\\s*\\+[1-9]\\d*$`).test(line.trim()))) return true;
+  }
   if (slot === '장갑' && /크리티컬 데미지[^%]*\+\d+%/.test(line)) return true;
   if (slot === '모자' && /스킬 재사용 대기시간.*감소/.test(line)) return true;
   return mainStatsForJob(job).some((stat) => new RegExp(`${stat}[^%]*\\+\\d+%`).test(line));
@@ -123,21 +131,30 @@ function effectivePotentialLine(line, item, job) {
 
 function potentialThreeLineRecommendations(items, characterJob) {
   return items.flatMap((item) => {
-    if (!item.potential_option_grade || item.special_ring_level) return [];
-    const lines = [item.potential_option_1, item.potential_option_2, item.potential_option_3];
-    const effectiveLines = lines.filter((line) => effectivePotentialLine(line, item, characterJob)).length;
-    if (item.potential_option_grade === '레전드리' && effectiveLines >= 3) return [];
-    const actions = [];
-    if (item.potential_option_grade !== '레전드리') actions.push(`윗잠 ${item.potential_option_grade} -> 레전드리`);
-    actions.push(`보스전 유효 ${effectiveLines}줄 -> 3줄`);
-    return [{
-      ruleId: 'boss-potential-three-lines', sourceKind: 'combat-option-rule', recommendationKind: 'potential',
-      itemName: item.item_name, slot: item.item_equipment_slot,
-      current: { potentialGrade: item.potential_option_grade, effectiveLines },
-      target: { potentialGrade: '레전드리', effectiveLines: 3 }, actions,
-      expectedMeso: null, expectedMesoPerStar: null,
-      reason: '사냥용 옵션을 제외하고 직업 주스탯과 무기류 보스전 옵션을 기준으로 판정한 윗잠 3줄 목표입니다.',
-    }];
+    if (item.special_ring_level) return [];
+    return [
+      { type: 'regular', prefix: 'potential_option', label: '윗잠' },
+      { type: 'additional', prefix: 'additional_potential_option', label: '에디셔널' },
+    ].flatMap(({ type, prefix, label }) => {
+      const grade = item[`${prefix}_grade`];
+      if (!Object.hasOwn(gradeIds, grade)) return [];
+      const lines = [1, 2, 3].map((index) => item[`${prefix}_${index}`]);
+      if (type === 'additional' && !lines.some((line) => line?.trim())) return [];
+      const effectiveLines = lines.filter((line) => effectivePotentialLine(line, item, characterJob, type)).length;
+      if (grade === '레전드리' && effectiveLines >= 3) return [];
+      const actions = [];
+      if (grade !== '레전드리') actions.push(`${label} ${grade} -> 레전드리`);
+      actions.push(`${type === 'additional' ? '에디셔널 ' : ''}보스전 유효 ${effectiveLines}줄 -> 3줄`);
+      return [{
+        ruleId: type === 'regular' ? 'boss-potential-three-lines' : 'boss-additional-potential-three-lines',
+        sourceKind: 'combat-option-rule', recommendationKind: 'potential', potentialType: type,
+        itemName: item.item_name, slot: item.item_equipment_slot,
+        current: { potentialGrade: grade, effectiveLines },
+        target: { potentialGrade: '레전드리', effectiveLines: 3 }, actions,
+        expectedMeso: null, expectedMesoPerStar: null,
+        reason: `사냥용 옵션을 제외하고 직업 주스탯과 무기류 보스전 옵션을 기준으로 판정한 ${label} 3줄 목표입니다. 비용과 최종뎀 효율은 미검증입니다.`,
+      }];
+    });
   });
 }
 

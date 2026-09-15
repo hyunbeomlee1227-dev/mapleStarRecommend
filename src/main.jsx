@@ -93,7 +93,7 @@ function App() {
     }
     const controller = new AbortController();
     setRecommendationStatus('loading', '강화 후보를 확인하는 중입니다.');
-    const items = data.items.filter(supportsEnhancement).map(({ item_name, item_description, item_equipment_slot, item_equipment_part, item_total_option, item_base_option, starforce, special_ring_level, potential_option_grade, additional_potential_option_grade, potential_option_1, potential_option_2, potential_option_3 }) => ({
+    const items = data.items.filter(supportsEnhancement).map(({ item_name, item_description, item_equipment_slot, item_equipment_part, item_total_option, item_base_option, starforce, special_ring_level, potential_option_grade, additional_potential_option_grade, potential_option_1, potential_option_2, potential_option_3, additional_potential_option_1, additional_potential_option_2, additional_potential_option_3 }) => ({
       item_name,
       item_description,
       item_equipment_slot,
@@ -106,6 +106,9 @@ function App() {
       potential_option_1,
       potential_option_2,
       potential_option_3,
+      additional_potential_option_1,
+      additional_potential_option_2,
+      additional_potential_option_3,
     }));
     fetch('/api/recommendations', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ goalId, characterJob: data.character.job, mode: recommendationMode, budgetMesos, starforceConditions: { mvpGrade, pcRoom, safeguard }, combat: data.combat, items }), signal: controller.signal })
       .then(async (response) => { const result = await response.json(); if (!response.ok) throw new Error(result.message); return result; })

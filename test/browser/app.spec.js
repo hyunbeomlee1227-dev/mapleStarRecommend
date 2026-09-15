@@ -105,6 +105,7 @@ test('boss equipment goals are shown for the selected solo boss range', async ({
   await page.getByLabel('보스', { exact: true }).selectOption('스우');
   await expect(page.getByLabel('난이도', { exact: true })).toHaveValue('lotus-hard');
   await expect(page.getByRole('heading', { name: '보스 장비 강화 우선순위' })).toBeVisible();
+  await expect(page.getByText(/에디셔널 보스전 유효.*줄 -> 3줄/).first()).toBeVisible();
   await expect(page.getByText('에스텔라 이어링', { exact: true }).last()).toBeVisible();
   await expect(page.getByText('스타포스 17성 -> 22성', { exact: true }).first()).toBeVisible();
   const meisterStarforce = page.locator('.equipment-recommendation-list article').filter({ hasText: '마이스터링' }).filter({ has: page.getByText('스타포스 17성 -> 18성', { exact: true }) });
@@ -160,6 +161,7 @@ test('real lookup UI merges cash equipment and keeps it out of upgrade recommend
   await expect(detail.getByText('전체 · H10 S20 V30', { exact: true })).toBeVisible();
   await expect(detail.getByRole('button', { name: '공식 잠재 옵션표 보기' })).toHaveCount(0);
   await expect.poll(() => recommendationBodies.at(-1)?.items.some((item) => item.item_name === '별빛 모자')).toBe(false);
+  await expect.poll(() => recommendationBodies.at(-1)?.items[0]?.additional_potential_option_1).toBe('공격력 : +10');
   await page.screenshot({ path: `test-results/cash-equipment-${info.project.name}.png`, fullPage: true });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   if (info.project.name === 'mobile') await page.getByLabel('장비 상세 닫기').click();

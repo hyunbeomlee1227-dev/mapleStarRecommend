@@ -165,6 +165,55 @@ test('boss potential recommendations require three effective combat lines', () =
   assert.deepEqual(potential.actions, ['보스전 유효 2줄 -> 3줄']);
 });
 
+test('regular and additional potential targets are evaluated independently', () => {
+  const item = {
+    item_name: '두 잠재 무기', item_equipment_slot: '무기',
+    potential_option_grade: '레전드리', potential_option_1: '마력 : +12%',
+    potential_option_2: '마력 : +9%', potential_option_3: '보스 몬스터 공격 시 데미지 : +30%',
+    additional_potential_option_grade: '유니크', additional_potential_option_1: '마력 : +9%',
+    additional_potential_option_2: '공격력 : +6%', additional_potential_option_3: '마력 : +6%',
+  };
+  const plan = buildRecommendationPlan({ goal, mode: 'all', budgetMesos: null, combat, characterJob: '비숍', items: [item] });
+  assert.equal(plan.equipmentRecommendations.length, 1);
+  const target = plan.equipmentRecommendations[0];
+  assert.equal(target.potentialType, 'additional');
+  assert.equal(target.current.effectiveLines, 2);
+  assert.deepEqual(target.actions, ['에디셔널 유니크 -> 레전드리', '에디셔널 보스전 유효 2줄 -> 3줄']);
+  assert.equal(target.expectedMeso, null);
+
+  const complete = buildRecommendationPlan({ goal, mode: 'all', budgetMesos: null, combat, characterJob: '비숍', items: [{
+    ...item, additional_potential_option_grade: '레전드리', additional_potential_option_2: '마력 : +9%',
+  }] });
+  assert.equal(complete.equipmentRecommendations.length, 0);
+});
+
+test('additional armor counts flat attack and level-scaled main stat, but not farming lines or absent data', () => {
+  const item = {
+    item_name: '에디 모자', item_equipment_slot: '모자', additional_potential_option_grade: '레전드리',
+    additional_potential_option_1: '공격력 : +10',
+    additional_potential_option_2: '캐릭터 기준 9레벨 당 STR : +1',
+    additional_potential_option_3: '메소 획득량 : +20%',
+  };
+  const plan = buildRecommendationPlan({ goal, mode: 'all', budgetMesos: null, combat, characterJob: '히어로', items: [item] });
+  assert.equal(plan.equipmentRecommendations[0].current.effectiveLines, 2);
+  const missing = buildRecommendationPlan({ goal, mode: 'all', budgetMesos: null, combat, items: [{
+    item_name: '옵션 미제공', item_equipment_slot: '모자', additional_potential_option_grade: '레전드리',
+  }] });
+  assert.equal(missing.equipmentRecommendations.length, 0);
+  for (const grade of ['toString', 'constructor', '__proto__', '미지원']) {
+    const unsupported = buildRecommendationPlan({
+      goal, mode: 'all', budgetMesos: null, combat, characterJob: '히어로',
+      items: [{ ...item, additional_potential_option_grade: grade }],
+    });
+    assert.equal(unsupported.equipmentRecommendations.length, 0);
+  }
+  const invalid = recommendationRequestSchema.safeParse({
+    goalId: goal.id, mode: 'all', budgetMesos: null, combat,
+    items: [{ ...item, additional_potential_option_1: 'x'.repeat(501) }],
+  });
+  assert.equal(invalid.success, false);
+});
+
 test('new jobs use their official main stat and attack type for potential lines', () => {
   const items = [{
     item_name: '검증 무기', item_equipment_slot: '무기', baseEquipmentLevel: 200, starforce: '22',
