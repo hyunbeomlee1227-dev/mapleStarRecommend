@@ -43,3 +43,10 @@
 .potential-guarantee-inputs{margin-top:14px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:12px 0}.potential-guarantee-inputs h4{margin-bottom:8px}.potential-guarantee-inputs label{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:7px 2px;font-size:10px}.potential-guarantee-inputs label span{display:flex;flex-direction:column;gap:3px}.potential-guarantee-inputs small{color:var(--muted);font-size:9px}.potential-guarantee-inputs input{width:82px;height:32px;border:1px solid var(--line);border-radius:4px;padding:0 8px;text-align:right}
 .tooltip-cash-details h4{margin-bottom:7px}.tooltip-cash-details p{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:3px 0;color:#c4c8cf;line-height:1.5}.tooltip-cash-details strong{color:#fff;text-align:right;overflow-wrap:anywhere}.item-row .not-applicable{overflow-wrap:anywhere}
 .recommendation-cost{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline;margin-top:8px}.recommendation-cost strong{color:var(--text);font-size:14px}.recommendation-cost span{color:var(--muted);font-size:12px}
+.potential-evidence{margin-top:10px;font-size:11px;color:#53625b}
+.potential-evidence summary{cursor:pointer;padding:6px 0}
+.potential-evidence ol{list-style:none;padding:0;margin:6px 0}
+.potential-evidence li{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:1px solid var(--line)}
+.potential-evidence li span{min-width:0;overflow-wrap:anywhere;line-height:1.6}
+.potential-evidence li strong{flex-shrink:0;font-size:10px}
+.potential-evidence p{margin-top:6px;font-size:10px;line-height:1.7}

@@ -110,8 +110,10 @@ function mainStatsForJob(job) {
   return ['STR', '올스탯'];
 }
 
+const farmingPotentialPattern = /아이템 드롭률|메소 획득량|경험치/;
+
 function effectivePotentialLine(line, item, job, potentialType = 'regular') {
-  if (!line || /아이템 드롭률|메소 획득량|경험치/.test(line)) return false;
+  if (!line || farmingPotentialPattern.test(line)) return false;
   const slot = item.item_equipment_slot.replace(/\d+$/, '');
   if (['무기', '보조무기', '엠블렘'].includes(slot)) {
     const attack = magicJobs.has(job) ? '마력' : '공격력';
@@ -140,7 +142,16 @@ function potentialThreeLineRecommendations(items, characterJob) {
       if (!Object.hasOwn(gradeIds, grade)) return [];
       const lines = [1, 2, 3].map((index) => item[`${prefix}_${index}`]);
       if (type === 'additional' && !lines.some((line) => line?.trim())) return [];
-      const effectiveLines = lines.filter((line) => effectivePotentialLine(line, item, characterJob, type)).length;
+      const lineAssessments = lines.map((line, index) => {
+        const option = line?.trim() || null;
+        const status = !option ? 'missing'
+          : farmingPotentialPattern.test(option) ? 'farming'
+            : effectivePotentialLine(option, item, characterJob, type) ? 'effective' : 'unverified';
+        return { line: index + 1, option, status };
+      });
+      const effectiveLines = lineAssessments.filter((line) => line.status === 'effective').length;
+      const unverifiedLines = lineAssessments.filter((line) => line.status === 'unverified').length;
+      const missingLines = lineAssessments.filter((line) => line.status === 'missing').length;
       if (grade === '레전드리' && effectiveLines >= 3) return [];
       const actions = [];
       if (grade !== '레전드리') actions.push(`${label} ${grade} -> 레전드리`);
@@ -151,6 +162,10 @@ function potentialThreeLineRecommendations(items, characterJob) {
         itemName: item.item_name, slot: item.item_equipment_slot,
         current: { potentialGrade: grade, effectiveLines },
         target: { potentialGrade: '레전드리', effectiveLines: 3 }, actions,
+        lineAssessments,
+        unverifiedLines,
+        missingLines,
+        unconfirmedLines: unverifiedLines + missingLines,
         expectedMeso: null, expectedMesoPerStar: null,
         reason: `사냥용 옵션을 제외하고 직업 주스탯과 무기류 보스전 옵션을 기준으로 판정한 ${label} 3줄 목표입니다. 비용과 최종뎀 효율은 미검증입니다.`,
       }];

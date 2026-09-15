@@ -163,6 +163,25 @@ test('boss potential recommendations require three effective combat lines', () =
   const potential = result.equipmentRecommendations.find((entry) => entry.recommendationKind === 'potential');
   assert.equal(potential.current.effectiveLines, 2);
   assert.deepEqual(potential.actions, ['보스전 유효 2줄 -> 3줄']);
+  assert.deepEqual(potential.lineAssessments.map((line) => line.status), ['effective', 'farming', 'effective']);
+  assert.equal(potential.unverifiedLines, 0);
+});
+
+test('potential evidence distinguishes unknown and missing lines from farming options', () => {
+  const result = buildRecommendationPlan({ goal, mode: 'all', budgetMesos: null, combat, characterJob: '히어로', items: [{
+    item_name: '미판정 모자', item_equipment_slot: '모자', potential_option_grade: '레전드리',
+    potential_option_1: '알 수 없는 특수 효과', potential_option_2: null, potential_option_3: 'STR : +13%',
+  }] });
+  const candidate = result.equipmentRecommendations[0];
+  assert.deepEqual(candidate.lineAssessments, [
+    { line: 1, option: '알 수 없는 특수 효과', status: 'unverified' },
+    { line: 2, option: null, status: 'missing' },
+    { line: 3, option: 'STR : +13%', status: 'effective' },
+  ]);
+  assert.equal(candidate.current.effectiveLines, 1);
+  assert.equal(candidate.unverifiedLines, 1);
+  assert.equal(candidate.missingLines, 1);
+  assert.equal(candidate.unconfirmedLines, 2);
 });
 
 test('regular and additional potential targets are evaluated independently', () => {

@@ -112,6 +112,13 @@ test('boss equipment goals are shown for the selected solo boss range', async ({
   await expect(meisterStarforce).toHaveCount(1);
   await expect(meisterStarforce).toContainText('예상');
   await expect(page.getByText('보스전 유효 2줄 -> 3줄', { exact: true }).first()).toBeVisible();
+  const evidence = page.locator('.potential-evidence').filter({ hasText: '미확인' }).first();
+  await evidence.locator('summary').click();
+  await expect(evidence.locator('li')).toHaveCount(3);
+  await expect(evidence).toContainText('미판정');
+  await expect(evidence.getByText('미판정·미제공 옵션은 성능이 없다는 뜻이 아닙니다. 이 추천은 확인이 필요한 잠정 목표입니다.')).toBeVisible();
+  expect(await evidence.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+  await evidence.screenshot({ path: `test-results/evidence-${info.project.name}.png` });
   await page.screenshot({ path: `test-results/recommendations-${info.project.name}.png`, fullPage: true });
   await page.getByLabel('난이도', { exact: true }).selectOption('lotus-extreme');
   await expect(page.getByText('아케인셰이드 투핸드소드', { exact: true }).last()).toBeVisible();
