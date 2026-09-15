@@ -1,5 +1,19 @@
 import { test, expect } from '@playwright/test';
 
+test('budget results explain exclusions without promising success', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: '예산 내 추천' }).click();
+  await page.getByLabel('예산 (억 메소)').fill('0.1');
+  const summary = page.getByLabel('예산 추천 집계');
+  await expect(summary).toContainText('비용 미확인');
+  await expect(summary).toContainText('남은 예산 초과');
+  await expect(summary).toContainText('예산 내 성공을 보장하지 않습니다.');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.getByRole('button', { name: '전체 추천', exact: true }).click();
+  await expect(summary).toHaveCount(0);
+  await expect(page.locator('.equipment-recommendation-list')).toBeVisible();
+});
+
 test('equipment browsing, filters, detail and status remain usable', async ({ page }, info) => {
   const errors = []; page.on('pageerror', (error) => errors.push(error.message));
   await page.goto('/');

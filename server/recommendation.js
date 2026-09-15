@@ -281,9 +281,18 @@ export function buildRecommendationPlan({ goal, mode, budgetMesos, combat, chara
     : ['upgrade-rules', 'job-damage-model'];
   const allRecommendations = equipmentRecommendations(goal, items, equipmentTargets, rules, characterJob, resolvedStarforceConditions.calculation);
   let remainingBudget = budgetMesos;
+  let unknownCostCandidates = 0;
+  let overBudgetCandidates = 0;
   const selectedRecommendations = mode === 'budget'
     ? allRecommendations.filter((candidate) => {
-      if (candidate.expectedMeso === null || candidate.expectedMeso > remainingBudget) return false;
+      if (candidate.expectedMeso === null) {
+        unknownCostCandidates += 1;
+        return false;
+      }
+      if (candidate.expectedMeso > remainingBudget) {
+        overBudgetCandidates += 1;
+        return false;
+      }
       remainingBudget -= candidate.expectedMeso;
       return true;
     })
@@ -302,6 +311,14 @@ export function buildRecommendationPlan({ goal, mode, budgetMesos, combat, chara
       sourceKind: 'curated-rule',
       budgetApplied: mode === 'budget',
       budgetRemaining: mode === 'budget' ? remainingBudget : null,
+      budgetSummary: mode === 'budget' ? {
+        totalCandidates: allRecommendations.length,
+        selectedCandidates: selectedRecommendations.length,
+        unknownCostCandidates,
+        overBudgetCandidates,
+        expectedSpend: budgetMesos - remainingBudget,
+        successGuaranteed: false,
+      } : null,
       starforceConditions: resolvedStarforceConditions.selected,
       starforceDiscountRate: resolvedStarforceConditions.discountRate,
     },

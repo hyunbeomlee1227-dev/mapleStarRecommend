@@ -76,6 +76,39 @@ test('equipment target catalog is validated and versioned', async () => {
   assert.equal(catalog.rules.some((rule) => rule.id === 'astra-secondary-22-lategame'), true);
 });
 
+test('budget recommendation explains excluded unknown-cost and over-budget candidates', async () => {
+  const rules = await loadUpgradeRules();
+  const targets = { version: 'budget-v1', updatedAt: '2026-09-15', rules: [{
+    id: 'target-18', slots: ['모자'], minGoalOrder: 0, maxGoalOrder: 999,
+    target: { starforce: 18 }, reason: 'budget test',
+  }] };
+  const budgetItems = [{
+    item_name: '예산 모자', item_equipment_slot: '모자', baseEquipmentLevel: 200, starforce: '17',
+    potential_option_grade: '유니크',
+  }];
+  const limited = buildRecommendationPlan({ goal, mode: 'budget', budgetMesos: 1, combat, items: budgetItems, rules, equipmentTargets: targets });
+  assert.deepEqual(limited.equipmentTargetTrace.budgetSummary, {
+    totalCandidates: 2, selectedCandidates: 0, unknownCostCandidates: 1, overBudgetCandidates: 1,
+    expectedSpend: 0, successGuaranteed: false,
+  });
+  const all = buildRecommendationPlan({ goal, mode: 'all', budgetMesos: null, combat, items: budgetItems, rules, equipmentTargets: targets });
+  assert.equal(all.equipmentTargetTrace.budgetSummary, null);
+  const cost = all.equipmentRecommendations.find((candidate) => candidate.recommendationKind === 'starforce').expectedMeso;
+  const exact = buildRecommendationPlan({ goal, mode: 'budget', budgetMesos: cost, combat, items: budgetItems, rules, equipmentTargets: targets });
+  assert.equal(exact.equipmentTargetTrace.budgetSummary.expectedSpend, cost);
+  assert.equal(exact.equipmentTargetTrace.budgetSummary.selectedCandidates, 1);
+  assert.equal(exact.equipmentTargetTrace.budgetSummary.overBudgetCandidates, 0);
+  const residual = buildRecommendationPlan({
+    goal, mode: 'budget', budgetMesos: cost, combat,
+    items: [...budgetItems, { ...budgetItems[0], item_name: '두 번째 모자' }], rules, equipmentTargets: targets,
+  });
+  assert.deepEqual(residual.equipmentTargetTrace.budgetSummary, {
+    totalCandidates: 4, selectedCandidates: 1, unknownCostCandidates: 2, overBudgetCandidates: 1,
+    expectedSpend: cost, successGuaranteed: false,
+  });
+  assert.equal(residual.equipmentTargetTrace.budgetRemaining, 0);
+});
+
 test('recommendation input validates permanent starforce benefits', () => {
   assert.equal(recommendationRequestSchema.safeParse({
     goalId: goal.id, mode: 'all', budgetMesos: null, combat, items: [],
