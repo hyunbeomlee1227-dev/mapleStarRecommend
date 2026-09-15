@@ -1,11 +1,12 @@
 import { z } from 'zod';
-import { supportsStarforce } from '../shared/equipment.js';
+import { supportsStandardStarforce } from '../shared/equipment.js';
 import { calculateNextStarCost, calculateStarforceTargetCost } from './starforce.js';
 
 const itemSchema = z.object({
   item_name: z.string().min(1).max(200),
   item_equipment_slot: z.string().min(1).max(100),
   item_equipment_part: z.string().min(1).max(100).nullable().optional(),
+  item_description: z.string().max(1000).nullable().optional(),
   baseEquipmentLevel: z.number().int().min(1).max(300).nullable().optional(),
   starforce: z.union([z.string().max(10), z.number().finite()]).nullable().optional(),
   special_ring_level: z.union([z.string().max(10), z.number().finite()]).nullable().optional(),
@@ -14,6 +15,10 @@ const itemSchema = z.object({
   potential_option_1: z.string().max(500).nullable().optional(),
   potential_option_2: z.string().max(500).nullable().optional(),
   potential_option_3: z.string().max(500).nullable().optional(),
+});
+const starforceConditionsSchema = z.object({
+  mvpGrade: z.enum(['none', 'silver', 'gold', 'diamond', 'red', 'black']),
+  pcRoom: z.boolean(),
 });
 
 export const recommendationRequestSchema = z.object({
@@ -25,6 +30,7 @@ export const recommendationRequestSchema = z.object({
     readiness: z.string().max(50),
     message: z.string().max(500).optional(),
   }).passthrough(),
+  starforceConditions: starforceConditionsSchema.default({ mvpGrade: 'none', pcRoom: false }),
   items: z.array(itemSchema).max(60),
 }).superRefine((value, context) => {
   if (value.mode === 'budget' && value.budgetMesos === null) {
@@ -55,6 +61,19 @@ function jobEquipmentReference(characterJob, items, equipmentBaselines) {
 }
 
 const gradeIds = { '레어': 'rare', '에픽': 'epic', '유니크': 'unique', '레전드리': 'legendary' };
+
+function resolveStarforceConditions(rules, selected = { mvpGrade: 'none', pcRoom: false }) {
+  const normalized = { mvpGrade: selected?.mvpGrade ?? 'none', pcRoom: selected?.pcRoom === true };
+  const config = rules?.starforcePermanentBenefits;
+  if (!config) return { selected: normalized, calculation: undefined, discountRate: 0 };
+  const discountRate = (config.mvpDiscountRates[normalized.mvpGrade] ?? 0)
+    + (normalized.pcRoom ? config.pcRoomDiscountRate : 0);
+  return {
+    selected: normalized,
+    calculation: { discountRate, discountUntilStar: config.discountUntilStar },
+    discountRate,
+  };
+}
 
 const magicJobs = new Set([
   '아크메이지(불,독)', '아크메이지(썬,콜)', '비숍', '플레임위자드', '에반', '루미너스',
@@ -138,10 +157,10 @@ function potentialTierUpgrades(items, rules) {
   });
 }
 
-function starforceRisks(items, rules) {
+function starforceRisks(items, rules, starforceCalculationConditions) {
   if (!rules?.starforceOutcomes || !rules.starforceCostModel) return [];
   return items.flatMap((item) => {
-    if (!supportsStarforce(item)) return [];
+    if (!supportsStandardStarforce(item)) return [];
     const currentStar = Number(item.starforce);
     const outcome = rules.starforceOutcomes[String(currentStar)];
     if (!outcome || !item.baseEquipmentLevel) return [];
@@ -151,6 +170,7 @@ function starforceRisks(items, rules) {
       outcome,
       outcomes: rules.starforceOutcomes,
       restoreResources: rules.starforceRestoreResources?.levels,
+      conditions: starforceCalculationConditions,
     });
     return [{
       type: 'starforce-risk', itemName: item.item_name, slot: item.item_equipment_slot, currentStar,
@@ -166,7 +186,7 @@ function starforceRisks(items, rules) {
   });
 }
 
-function equipmentRecommendations(goal, items, equipmentTargets, rules, characterJob) {
+function equipmentRecommendations(goal, items, equipmentTargets, rules, characterJob, starforceCalculationConditions) {
   const potential = potentialThreeLineRecommendations(items, characterJob);
   if (!Number.isInteger(goal?.order) || !equipmentTargets?.rules) return potential;
   const candidates = equipmentTargets.rules.flatMap((rule) => {
@@ -181,7 +201,7 @@ function equipmentRecommendations(goal, items, equipmentTargets, rules, characte
       return (nameMatches || slotMatches) && levelMatches;
     });
     return matchedItems.flatMap((item) => {
-      if (rule.target.starforce != null && !supportsStarforce(item)) return [];
+      if (rule.target.starforce != null && !supportsStandardStarforce(item)) return [];
       const rawStarforce = item.starforce;
       const currentStarforce = typeof rawStarforce === 'number'
         ? rawStarforce
@@ -195,6 +215,7 @@ function equipmentRecommendations(goal, items, equipmentTargets, rules, characte
         ? calculateStarforceTargetCost({
           level: item.baseEquipmentLevel, currentStar: currentStarforce, targetStar: rule.target.starforce,
           outcomes: rules?.starforceOutcomes, restoreResources: rules?.starforceRestoreResources?.levels,
+          conditions: starforceCalculationConditions,
         })
         : null;
       return [{
@@ -228,15 +249,16 @@ function equipmentRecommendations(goal, items, equipmentTargets, rules, characte
   return [...starforce, ...potential];
 }
 
-export function buildRecommendationPlan({ goal, mode, budgetMesos, combat, characterJob, items, rules, equipmentTargets, equipmentBaselines }) {
+export function buildRecommendationPlan({ goal, mode, budgetMesos, combat, characterJob, starforceConditions, items, rules, equipmentTargets, equipmentBaselines }) {
   const ruleTrace = { rulesVersion: rules?.version ?? null, rulesUpdatedAt: rules?.updatedAt ?? null };
   const coverage = {
     equipment: items.length,
-    starforce: items.filter(supportsStarforce).length,
+    starforce: items.filter(supportsStandardStarforce).length,
     potential: items.filter((item) => Boolean(item.potential_option_grade)).length,
     additionalPotential: items.filter((item) => Boolean(item.additional_potential_option_grade)).length,
   };
   const equipmentReference = jobEquipmentReference(characterJob, items, equipmentBaselines);
+  const resolvedStarforceConditions = resolveStarforceConditions(rules, starforceConditions);
   if (!goal) return { status: 'unknown-goal', message: '지원하는 목표 보스를 선택해 주세요.', mode, budgetMesos, coverage, blockers: ['goal'], jobEquipmentReference: equipmentReference, ...ruleTrace };
   if (combat.readiness !== 'snapshot-ready') {
     return { status: 'insufficient-data', message: combat.message || '보스전 비교에 필요한 능력치가 부족합니다.', mode, budgetMesos, coverage, blockers: ['combat-snapshot'], jobEquipmentReference: equipmentReference, ...ruleTrace };
@@ -244,7 +266,7 @@ export function buildRecommendationPlan({ goal, mode, budgetMesos, combat, chara
   const blockers = rules
     ? Object.entries(rules.capabilities).filter(([, capability]) => !capability.usableForRecommendation).map(([id]) => id)
     : ['upgrade-rules', 'job-damage-model'];
-  const allRecommendations = equipmentRecommendations(goal, items, equipmentTargets, rules, characterJob);
+  const allRecommendations = equipmentRecommendations(goal, items, equipmentTargets, rules, characterJob, resolvedStarforceConditions.calculation);
   let remainingBudget = budgetMesos;
   const selectedRecommendations = mode === 'budget'
     ? allRecommendations.filter((candidate) => {
@@ -267,11 +289,13 @@ export function buildRecommendationPlan({ goal, mode, budgetMesos, combat, chara
       sourceKind: 'curated-rule',
       budgetApplied: mode === 'budget',
       budgetRemaining: mode === 'budget' ? remainingBudget : null,
+      starforceConditions: resolvedStarforceConditions.selected,
+      starforceDiscountRate: resolvedStarforceConditions.discountRate,
     },
     jobEquipmentReference: equipmentReference,
     supportedCalculations: {
       potentialTierUpgrades: potentialTierUpgrades(items, rules),
-      starforceRisks: starforceRisks(items, rules),
+      starforceRisks: starforceRisks(items, rules, resolvedStarforceConditions.calculation),
     },
     ...ruleTrace,
     goal: { id: goal.id, boss: goal.boss, difficulty: goal.difficulty },

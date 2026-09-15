@@ -9,7 +9,7 @@ import { createApp } from '../server/app.js';
 
 test('upgrade rule catalog exposes verified costs and blocks incomplete calculations', async () => {
   const rules = await loadUpgradeRules();
-  assert.equal(rules.version, '2026-09-14-v9');
+  assert.equal(rules.version, '2026-09-15-v10');
   assert.equal(rules.capabilities.potentialResetCost.status, 'verified');
   assert.equal(rules.capabilities.potentialTierUpgrade.status, 'verified');
   assert.equal(rules.capabilities.potentialTierUpgrade.usableForRecommendation, true);
@@ -28,6 +28,11 @@ test('upgrade rule catalog exposes verified costs and blocks incomplete calculat
     sourceKind: 'community', sourceUrl: 'https://github.com/kurateh/mesulive',
     verifiedAgainst: '2026-03-21', minLevel: 1, maxLevel: 300,
   });
+  assert.deepEqual(rules.starforcePermanentBenefits.mvpDiscountRates, {
+    none: 0, silver: 0.03, gold: 0.05, diamond: 0.1, red: 0.1, black: 0.1,
+  });
+  assert.equal(rules.starforcePermanentBenefits.pcRoomDiscountRate, 0.05);
+  assert.equal(rules.starforcePermanentBenefits.discountUntilStar, 17);
   assert.deepEqual(rules.starforceRestoreResources.levels['200']['18'], {
     requiredCopies: 1,
     restoreMeso: 4_005_000_000,

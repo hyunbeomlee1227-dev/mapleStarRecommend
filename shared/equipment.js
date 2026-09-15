@@ -17,3 +17,8 @@ export function supportsStarforce(item) {
   }
   return !nonStarforceParts.has(item.item_equipment_slot) && !nonStarforceParts.has(item.item_equipment_part);
 }
+
+export function supportsStandardStarforce(item) {
+  if (!supportsStarforce(item)) return false;
+  return !/슈페리얼/.test(item.item_description ?? '') && !item.item_name?.startsWith('타일런트 ');
+}

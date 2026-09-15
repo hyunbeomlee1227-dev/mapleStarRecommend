@@ -1,11 +1,17 @@
-export function starforceAttemptCost(level, star) {
-  if (star <= 9) return Math.round((1000 + (level ** 3 * (star + 1)) / 36) / 100) * 100;
-  const divisors = { 10: 571, 11: 314, 12: 214, 13: 157, 14: 107, 17: 150, 18: 70, 19: 45, 21: 125 };
-  const raw = level ** 3 * (star + 1) ** 2.7 / (divisors[star] ?? 200);
-  return 1000 + Math.round(raw / 100) * 100;
+export function starforceAttemptCost(level, star, conditions = {}) {
+  let baseCost;
+  if (star <= 9) baseCost = Math.round((1000 + (level ** 3 * (star + 1)) / 36) / 100) * 100;
+  else {
+    const divisors = { 10: 571, 11: 314, 12: 214, 13: 157, 14: 107, 17: 150, 18: 70, 19: 45, 21: 125 };
+    const raw = level ** 3 * (star + 1) ** 2.7 / (divisors[star] ?? 200);
+    baseCost = 1000 + Math.round(raw / 100) * 100;
+  }
+  const discountRate = Math.min(1, Math.max(0, Number(conditions.discountRate) || 0));
+  const discountUntilStar = Number(conditions.discountUntilStar) || 0;
+  return star < discountUntilStar ? Math.round(baseCost * (1 - discountRate)) : baseCost;
 }
 
-function calculateRecoveryJourney({ level, star, outcomes, resource }) {
+function calculateRecoveryJourney({ level, star, outcomes, resource, conditions }) {
   let nextMeso = { constant: 0, restart: 0 };
   let nextCopies = { constant: 0, restart: 0 };
   let startingMeso;
@@ -17,7 +23,7 @@ function calculateRecoveryJourney({ level, star, outcomes, resource }) {
     const retryProbability = 1 - currentOutcome.maintainProbability;
     const meso = {
       constant: (
-        starforceAttemptCost(level, currentStar)
+        starforceAttemptCost(level, currentStar, conditions)
         + currentOutcome.successProbability * nextMeso.constant
         + currentOutcome.destroyProbability * resource.restoreMeso
       ) / retryProbability,
@@ -52,8 +58,8 @@ function calculateRecoveryJourney({ level, star, outcomes, resource }) {
   };
 }
 
-export function calculateNextStarCost({ level, star, outcome, outcomes, restoreResources }) {
-  const attemptCost = starforceAttemptCost(level, star);
+export function calculateNextStarCost({ level, star, outcome, outcomes, restoreResources, conditions }) {
+  const attemptCost = starforceAttemptCost(level, star, conditions);
   if (outcome.destroyProbability === 0) {
     return {
       attemptCost,
@@ -75,7 +81,7 @@ export function calculateNextStarCost({ level, star, outcome, outcomes, restoreR
   }
 
   if (star > 22) {
-    const journey = calculateRecoveryJourney({ level, star, outcomes, resource });
+    const journey = calculateRecoveryJourney({ level, star, outcomes, resource, conditions });
     return {
       attemptCost,
       recovery: { targetStar, ...resource },
@@ -94,14 +100,14 @@ export function calculateNextStarCost({ level, star, outcome, outcomes, restoreR
   };
 }
 
-export function calculateStarforceTargetCost({ level, currentStar, targetStar, outcomes, restoreResources }) {
+export function calculateStarforceTargetCost({ level, currentStar, targetStar, outcomes, restoreResources, conditions }) {
   if (!Number.isInteger(currentStar) || !Number.isInteger(targetStar) || targetStar <= currentStar) return null;
   let expectedMeso = 0;
   let expectedRecoveryCopies = 0;
   for (let star = currentStar; star < targetStar; star += 1) {
     const outcome = outcomes?.[String(star)];
     if (!outcome) return null;
-    const step = calculateNextStarCost({ level, star, outcome, outcomes, restoreResources });
+    const step = calculateNextStarCost({ level, star, outcome, outcomes, restoreResources, conditions });
     if (step.expectedMesoWithOwnedRecoveryItems === null || step.expectedRecoveryCopies === null) return null;
     expectedMeso += step.expectedMesoWithOwnedRecoveryItems;
     expectedRecoveryCopies += step.expectedRecoveryCopies;

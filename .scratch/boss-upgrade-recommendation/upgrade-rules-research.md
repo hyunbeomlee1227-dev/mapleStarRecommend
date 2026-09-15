@@ -103,9 +103,15 @@
 
 ## 4. 이벤트·할인
 
+### 2026-09-15 상시 혜택 재검증
+
+- MVP 스타포스 할인은 실버 3%, 골드 5%, 다이아·레드·블랙 10%이며 17성 도달까지 적용된다. 슈페리얼은 제외한다. 출처: [MVP 가이드](https://maplestory.nexon.com/Guide/N23GameInformation/Articles/425).
+- 프리미엄 PC방 할인은 5%이며 17성 도달까지 적용된다. 슈페리얼은 제외하고 MVP 할인과 함께 받을 수 있다. 출처: [PC방 가이드](https://maplestory.nexon.com/Guide/N23GameInformation/Articles/444).
+- 2026-09-15 진행 이벤트 목록에는 스타포스 기간 행사가 확인되지 않았다. 과거 샤이닝·30% 할인 수치는 현재 선택지로 사용하지 않는다. 출처: [진행 이벤트](https://maplestory.nexon.com/News/Event).
+
 | 상태 | 확인 내용 | 공식 출처 |
 |---|---|---|
-| 현재 가이드 확인 | PC방 스타포스 5% 할인, 안내상 1~17성 강화, 슈페리얼 제외, MVP 할인과 함께 적용 가능. 할인 합산 순서·파괴 방지 비용 적용 여부는 미확인 | [PC방 가이드](https://maplestory.nexon.com/Guide/N23GameInformation/Articles/444) |
+| 현재 가이드 확인 | PC방 스타포스 5% 할인, 안내상 1~17성 강화, 슈페리얼 제외, MVP 할인과 함께 적용 가능. 두 상시 할인은 합산하며 기간 행사·파괴 방지와의 중첩은 미지원 | [PC방 가이드](https://maplestory.nexon.com/Guide/N23GameInformation/Articles/444) |
 | 과거 행사 확인 | 2023-10-08 샤이닝: 5→6·10→11·15→16 성공 100%, 기본 비용 30% 할인. 슈페리얼 제외, 파괴 방지 추가 메소 할인 제외 | [행사 본문](https://maplestory.nexon.com/News/Event/823) |
 | 과거 행사 확인 | 2024-05-05 미라클: 잠재 재설정/대상 큐브의 등급 상승 확률 2배, 한 단계 상승. 현재 에디셔널 메소 재설정 이벤트 조건까지 증명하지 않음 | [행사 본문](https://maplestory.nexon.com/News/Event/942) |
 | 당일 목록 확인 | 2026-09-09 진행 목록에서 샤이닝·미라클 행사를 확인하지 못함. 이는 모든 월드별 혜택 부재를 증명하지 않음 | [이벤트 목록](https://maplestory.nexon.com/News/Event) |

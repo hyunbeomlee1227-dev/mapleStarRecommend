@@ -1,6 +1,6 @@
 {
-  "version": "2026-09-14-v9",
-  "updatedAt": "2026-09-14",
+  "version": "2026-09-15-v10",
+  "updatedAt": "2026-09-15",
   "capabilities": {
     "potentialResetCost": {
       "label": "잠재 재설정 비용",
@@ -27,7 +27,7 @@
       "label": "스타포스 기대 비용",
       "status": "partial",
       "usableForRecommendation": false,
-      "message": "결과 확률과 흔적 규칙은 공식 자료, 기본·복구 메소는 mesu.live 공개 모델을 사용해 보유 스페어 조건의 기대 비용을 제공합니다. 스페어 구매가는 제외합니다.",
+      "message": "결과 확률과 흔적 규칙은 공식 자료, 기본·복구 메소는 mesu.live 공개 모델을 사용합니다. MVP·PC방 상시 할인은 17성 도달까지 반영하며 스페어 구매가와 기간 행사는 제외합니다.",
       "sources": ["https://maplestory.nexon.com/news/update/799", "https://github.com/kurateh/mesulive"]
     },
     "bossDamageModel": {
@@ -102,6 +102,24 @@
     "verifiedAgainst": "2026-03-21",
     "minLevel": 1,
     "maxLevel": 300
+  },
+  "starforcePermanentBenefits": {
+    "verifiedAgainst": "2026-09-15",
+    "discountUntilStar": 17,
+    "stacking": "additive",
+    "mvpDiscountRates": {
+      "none": 0,
+      "silver": 0.03,
+      "gold": 0.05,
+      "diamond": 0.1,
+      "red": 0.1,
+      "black": 0.1
+    },
+    "pcRoomDiscountRate": 0.05,
+    "sources": [
+      "https://maplestory.nexon.com/Guide/N23GameInformation/Articles/425",
+      "https://maplestory.nexon.com/Guide/N23GameInformation/Articles/444"
+    ]
   },
   "starforceRestoreResources": {
     "sourceKind": "community",

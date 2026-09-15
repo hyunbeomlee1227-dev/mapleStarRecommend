@@ -76,6 +76,17 @@ test('equipment target catalog is validated and versioned', async () => {
   assert.equal(catalog.rules.some((rule) => rule.id === 'astra-secondary-22-lategame'), true);
 });
 
+test('recommendation input validates permanent starforce benefits', () => {
+  assert.equal(recommendationRequestSchema.safeParse({
+    goalId: goal.id, mode: 'all', budgetMesos: null, combat, items: [],
+    starforceConditions: { mvpGrade: 'gold', pcRoom: true },
+  }).success, true);
+  assert.equal(recommendationRequestSchema.safeParse({
+    goalId: goal.id, mode: 'all', budgetMesos: null, combat, items: [],
+    starforceConditions: { mvpGrade: 'vip', pcRoom: true },
+  }).success, false);
+});
+
 test('general job baseline applies by normalized slot and keeps only the strongest target', () => {
   const targets = {
     version: 'general-v1', updatedAt: '2026-09-11',
@@ -147,6 +158,37 @@ test('starforce targets are sorted by expected cost per star and budget is appli
   assert.deepEqual(limited.equipmentRecommendations.map((entry) => entry.itemName), [all.equipmentRecommendations[0].itemName]);
   assert.equal(limited.equipmentTargetTrace.budgetApplied, true);
   assert.equal(limited.equipmentTargetTrace.budgetRemaining, 0);
+
+  const discounted = buildRecommendationPlan({
+    goal, mode: 'all', budgetMesos: null, combat, characterJob: '히어로', items: costItems, rules,
+    equipmentTargets: targets, starforceConditions: { mvpGrade: 'diamond', pcRoom: true },
+  });
+  assert.deepEqual(discounted.equipmentTargetTrace.starforceConditions, { mvpGrade: 'diamond', pcRoom: true });
+
+  const lowStarTargets = { version: 'benefit-v1', updatedAt: '2026-09-15', rules: [{
+    id: 'target-17', slots: ['모자'], minGoalOrder: 0, maxGoalOrder: 999,
+    target: { starforce: 17 }, reason: '상시 혜택 검증',
+  }] };
+  const lowStarItem = [{ item_name: '15성 모자', item_equipment_slot: '모자', baseEquipmentLevel: 200, starforce: '15' }];
+  const undiscounted = buildRecommendationPlan({ goal, mode: 'all', budgetMesos: null, combat, items: lowStarItem, rules, equipmentTargets: lowStarTargets });
+  const withBenefits = buildRecommendationPlan({
+    goal, mode: 'all', budgetMesos: null, combat, items: lowStarItem, rules, equipmentTargets: lowStarTargets,
+    starforceConditions: { mvpGrade: 'gold', pcRoom: true },
+  });
+  assert.ok(withBenefits.equipmentRecommendations[0].expectedMeso < undiscounted.equipmentRecommendations[0].expectedMeso);
+});
+
+test('superior equipment is excluded from standard starforce recommendations', async () => {
+  const rules = await loadUpgradeRules();
+  const targets = { version: 'superior-v1', updatedAt: '2026-09-15', rules: [{
+    id: 'target-17', slots: ['망토'], minGoalOrder: 0, maxGoalOrder: 999,
+    target: { starforce: 17 }, reason: '일반 장비만 적용',
+  }] };
+  const result = buildRecommendationPlan({
+    goal, mode: 'all', budgetMesos: null, combat, rules, equipmentTargets: targets,
+    items: [{ item_name: '타일런트 히아데스 망토', item_description: '슈페리얼 장비', item_equipment_slot: '망토', baseEquipmentLevel: 150, starforce: '10' }],
+  });
+  assert.equal(result.equipmentRecommendations.some((entry) => entry.recommendationKind === 'starforce'), false);
 });
 
 test('equipment family targets evaluate every matching equipped item', () => {

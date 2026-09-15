@@ -104,6 +104,21 @@ const fileSchema = z.object({
     minLevel: z.literal(1),
     maxLevel: z.literal(300),
   }),
+  starforcePermanentBenefits: z.object({
+    verifiedAgainst: z.iso.date(),
+    discountUntilStar: z.literal(17),
+    stacking: z.literal('additive'),
+    mvpDiscountRates: z.object({
+      none: z.literal(0),
+      silver: z.literal(0.03),
+      gold: z.literal(0.05),
+      diamond: z.literal(0.1),
+      red: z.literal(0.1),
+      black: z.literal(0.1),
+    }),
+    pcRoomDiscountRate: z.literal(0.05),
+    sources: z.array(z.string().url()).length(2),
+  }),
   starforceRestoreResources: restoreResourcesSchema,
 });
 

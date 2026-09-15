@@ -67,3 +67,24 @@ test('target cost sums every star step and reports cost per gained star', () => 
   const expected = [18, 19, 20, 21].reduce((sum, star) => sum + Math.round(starforceAttemptCost(200, star) / 0.5), 0);
   assert.deepEqual(result, { expectedMeso: expected, expectedRecoveryCopies: 0, starsGained: 4, expectedMesoPerStar: Math.round(expected / 4) });
 });
+
+test('MVP and PC room discounts stack only while upgrading to 17 stars', () => {
+  const conditions = { discountRate: 0.15, discountUntilStar: 17 };
+  const base16 = starforceAttemptCost(200, 16);
+  const discounted16 = starforceAttemptCost(200, 16, conditions);
+  assert.equal(discounted16, Math.round(base16 * 0.85));
+  assert.equal(starforceAttemptCost(200, 17, conditions), starforceAttemptCost(200, 17));
+});
+
+test('target costs apply the selected permanent starforce benefits', () => {
+  const outcomes = Object.fromEntries([15, 16].map((star) => [String(star), {
+    successProbability: 1, maintainProbability: 0, destroyProbability: 0,
+  }]));
+  const base = calculateStarforceTargetCost({ level: 200, currentStar: 15, targetStar: 17, outcomes, restoreResources: {} });
+  const discounted = calculateStarforceTargetCost({
+    level: 200, currentStar: 15, targetStar: 17, outcomes, restoreResources: {},
+    conditions: { discountRate: 0.1, discountUntilStar: 17 },
+  });
+  assert.equal(discounted.expectedMeso, Math.round(starforceAttemptCost(200, 15) * 0.9) + Math.round(starforceAttemptCost(200, 16) * 0.9));
+  assert.ok(discounted.expectedMeso < base.expectedMeso);
+});

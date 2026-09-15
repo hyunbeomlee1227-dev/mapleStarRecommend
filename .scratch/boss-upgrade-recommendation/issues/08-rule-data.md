@@ -2,7 +2,7 @@
 
 Status: ready-for-agent
 Type: research
-Progress: restore-target-and-guarantee-models-implemented; events-pending
+Progress: restore-target-guarantee-and-permanent-benefits-implemented; timed-events-pending
 Depends on: 01 source survey
 
 ## 목적
@@ -82,3 +82,11 @@ Depends on: 01 source survey
 - 입력값은 1 이상 해당 등급의 전체 보장 횟수 이하인 정수만 허용하며 서버에서도 재검증한다. 입력하지 않은 등급은 공식 표의 전체 보장 횟수로 계산한다.
 - 보장 상태는 API로 조회할 수 없어 브라우저가 자동 확정하지 않는다. 사용자가 게임 내 퀘스트 알림이에서 확인한 월드 공유 값을 직접 입력해야 한다.
 - 이벤트·할인과 추천 목표 자동 선정이 남아 있어 티켓과 목표 옵션 capability는 부분 지원 상태를 유지한다.
+
+### 2026-09-15 MVP·PC방 상시 할인 반영
+
+- 공식 MVP 가이드의 실버 3%, 골드 5%, 다이아·레드·블랙 10%와 프리미엄 PC방 5%를 버전 규칙으로 등록했다.
+- 두 혜택은 공식 적용 범위인 17성 도달까지 합산하며, 17성 이상 시도와 온전 복구 메소에는 적용하지 않는다.
+- 추천 조건에서 MVP 등급과 PC방 여부를 선택하면 목표 스타까지 기대 비용과 예산 필터를 다시 계산한다.
+- 슈페리얼 장비는 별 표시는 유지하지만 일반 스타포스 비용·추천에서 제외한다.
+- 2026-09-15 진행 이벤트 목록에서 스타포스 기간 행사를 확인하지 못했으므로 과거 샤이닝·30% 할인은 선택지로 노출하지 않는다. 기간 행사 자동 갱신과 파괴 방지는 계속 미지원이다.
