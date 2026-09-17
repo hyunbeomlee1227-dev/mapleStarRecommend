@@ -1,5 +1,6 @@
 # 직업별 계산과 보스 목표 기준
 
+GitHub-Issue: https://github.com/hyunbeomlee1227-dev/mapleStarRecommend/issues/2
 Status: ready-for-human
 Type: research
 Depends on: 01

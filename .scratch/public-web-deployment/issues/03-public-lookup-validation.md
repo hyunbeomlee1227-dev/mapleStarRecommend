@@ -1,5 +1,6 @@
 # 공개 캐릭터 조회 및 요청 제한 검증
 
+GitHub-Issue: https://github.com/hyunbeomlee1227-dev/mapleStarRecommend/issues/11
 Status: ready-for-human
 Type: task
 Progress: live-lookup-responsive-layout-and-rate-limit-passed

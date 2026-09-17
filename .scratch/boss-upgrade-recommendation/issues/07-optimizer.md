@@ -1,5 +1,6 @@
 # 예산 배분 최적 조합 추천
 
+GitHub-Issue: https://github.com/hyunbeomlee1227-dev/mapleStarRecommend/issues/7
 Status: needs-info
 Type: task
 Milestone: future

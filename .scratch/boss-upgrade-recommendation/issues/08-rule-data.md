@@ -1,5 +1,6 @@
 # 강화 수치 데이터 검증
 
+GitHub-Issue: https://github.com/hyunbeomlee1227-dev/mapleStarRecommend/issues/8
 Status: ready-for-agent
 Type: research
 Progress: restore-target-guarantee-permanent-benefits-and-safeguard-implemented; timed-events-pending

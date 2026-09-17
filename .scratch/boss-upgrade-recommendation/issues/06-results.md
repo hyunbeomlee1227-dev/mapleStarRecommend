@@ -1,5 +1,6 @@
 # 추천 화면과 공개 전 검증
 
+GitHub-Issue: https://github.com/hyunbeomlee1227-dev/mapleStarRecommend/issues/6
 Status: ready-for-agent
 Type: task
 Depends on: 03, 04, 05

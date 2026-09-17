@@ -1,5 +1,6 @@
 # Render 공개 서비스 배포
 
+GitHub-Issue: https://github.com/hyunbeomlee1227-dev/mapleStarRecommend/issues/10
 Status: ready-for-human
 Type: task
 Progress: free-service-live; public-smoke-passed; proxy-hardening-live-and-verified

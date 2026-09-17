@@ -1,5 +1,6 @@
 # 공식 데이터와 강화 규칙 조사
 
+GitHub-Issue: https://github.com/hyunbeomlee1227-dev/mapleStarRecommend/issues/1
 Status: ready-for-agent
 Type: research
 Progress: source-survey-complete; authenticated-response-verified; numeric-validation-pending

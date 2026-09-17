@@ -1,5 +1,6 @@
 # 캐릭터 조회 기반
 
+GitHub-Issue: https://github.com/hyunbeomlee1227-dev/mapleStarRecommend/issues/3
 Status: ready-for-human
 Type: task
 Progress: implementation-complete

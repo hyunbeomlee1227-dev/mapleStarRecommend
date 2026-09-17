@@ -2,7 +2,7 @@
 
 ### Issue tracker
 
-Issues are tracked as local markdown files under `.scratch/<feature-slug>/`. See `docs/agents/issue-tracker.md`.
+Issues are tracked in GitHub Issues for `hyunbeomlee1227-dev/mapleStarRecommend`. Legacy local issue files under `.scratch/<feature-slug>/issues/` are read-only migration archives. See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 

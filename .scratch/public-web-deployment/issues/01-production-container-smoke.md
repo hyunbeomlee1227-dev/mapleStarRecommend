@@ -1,5 +1,6 @@
 # 운영 컨테이너 스모크 테스트 자동화
 
+GitHub-Issue: https://github.com/hyunbeomlee1227-dev/mapleStarRecommend/issues/9
 Status: ready-for-human
 Type: task
 Progress: implementation-complete; review-findings-fixed; github-ci-passed

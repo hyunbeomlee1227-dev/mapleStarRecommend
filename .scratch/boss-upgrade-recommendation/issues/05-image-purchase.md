@@ -1,5 +1,6 @@
 # 이미지와 구매 비교
 
+GitHub-Issue: https://github.com/hyunbeomlee1227-dev/mapleStarRecommend/issues/5
 Status: ready-for-agent
 Type: task
 Depends on: 02, 03, 04

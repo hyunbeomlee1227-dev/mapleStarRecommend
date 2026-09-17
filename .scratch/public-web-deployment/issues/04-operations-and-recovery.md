@@ -1,5 +1,6 @@
 # 사용량 기록 보존 및 운영 복구 절차
 
+GitHub-Issue: https://github.com/hyunbeomlee1227-dev/mapleStarRecommend/issues/12
 Status: ready-for-human
 Type: task
 Progress: free-tier-persistence-waived; operations-runbook-complete

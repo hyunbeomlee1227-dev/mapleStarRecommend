@@ -1,30 +1,30 @@
-# Issue tracker: Local Markdown
+# Issue tracker: GitHub Issues
 
-Issues and specs for this repo live as markdown files in `.scratch/`.
+GitHub Issues is the canonical tracker for implementation work. Feature specs may remain as markdown files in `.scratch/`.
 
 ## Conventions
 
-- One feature per directory: `.scratch/<feature-slug>/`
-- The spec is `.scratch/<feature-slug>/spec.md`
-- Implementation issues are one file per ticket at `.scratch/<feature-slug>/issues/<NN>-<slug>.md`, numbered from `01`, never a single combined tickets file
-- Triage state is recorded as a `Status:` line near the top of each issue file (see `triage-labels.md` for the role strings)
-- Comments and conversation history append to the bottom of the file under a `## Comments` heading
+- One feature spec per directory: `.scratch/<feature-slug>/spec.md`.
+- Create new implementation tickets in GitHub Issues, not under `.scratch/<feature-slug>/issues/`.
+- Preserve `Status:`, `Type:`, dependencies, acceptance criteria and implementation history in the GitHub issue body.
+- Use the triage role strings in `triage-labels.md` when labels are available; otherwise keep the role in the issue body.
+- Files already under `.scratch/<feature-slug>/issues/` are migration archives. Their `GitHub-Issue:` line points to the canonical ticket; do not append new progress there.
 
 ## When a skill says "publish to the issue tracker"
 
-Create a new file under `.scratch/<feature-slug>/` (creating the directory if needed).
+Create a GitHub Issue in `hyunbeomlee1227-dev/mapleStarRecommend`. Link the relevant local spec when one exists, and never publish credentials or secrets.
 
 ## When a skill says "fetch the relevant ticket"
 
-Read the file at the referenced path. The user will normally pass the path or the issue number directly.
+Open the referenced GitHub issue by number or URL. When given a legacy local issue path, follow its `GitHub-Issue:` value and treat GitHub as canonical.
 
 ## Wayfinding operations
 
-Used by `/wayfinder`. The **map** is a file with one **child** file per ticket.
+Used by `/wayfinder`. The **map** may remain local, but child tickets are GitHub Issues.
 
 - **Map**: `.scratch/<effort>/map.md` (the Notes / Decisions-so-far / Fog body).
-- **Child ticket**: `.scratch/<effort>/issues/NN-<slug>.md`, numbered from `01`, with the question in the body. A `Type:` line records the ticket type (`research`/`prototype`/`grilling`/`task`); a `Status:` line records `claimed`/`resolved`.
-- **Blocking**: a `Blocked by: NN, NN` line near the top. A ticket is unblocked when every file it lists is `resolved`.
-- **Frontier**: scan `.scratch/<effort>/issues/` for files that are open, unblocked, and unclaimed; first by number wins.
-- **Claim**: set `Status: claimed` and save before any work.
-- **Resolve**: append the answer under an `## Answer` heading, set `Status: resolved`, then append a context pointer (gist + link) to the map's Decisions-so-far in `map.md`.
+- **Child ticket**: a GitHub Issue linked from the map. Record its type (`research`/`prototype`/`grilling`/`task`) and status in the issue body or labels.
+- **Blocking**: record `Blocked by #N, #N` in the issue. A ticket is unblocked when every referenced issue is closed.
+- **Frontier**: scan open GitHub Issues for tickets that are unblocked and unclaimed; lowest issue number wins.
+- **Claim**: assign the issue or record `Status: claimed` before any work.
+- **Resolve**: append the answer or completion evidence to the GitHub Issue, close it, then append a context pointer to the map's Decisions-so-far.
