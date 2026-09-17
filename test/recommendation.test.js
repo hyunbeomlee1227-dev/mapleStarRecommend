@@ -76,6 +76,18 @@ test('equipment target catalog is validated and versioned', async () => {
   assert.equal(catalog.rules.some((rule) => rule.id === 'astra-secondary-22-lategame'), true);
 });
 
+test('unverified timed events block starforce cost rankings without hiding other upgrade types', () => {
+  const estella = { item_name: '에스텔라 이어링', item_equipment_slot: '귀고리', baseEquipmentLevel: 160, starforce: '17', potential_option_grade: '유니크', potential_option_1: 'DEX +9%', potential_option_2: 'DEX +6%' };
+  const result = buildRecommendationPlan({
+    goal, mode: 'all', budgetMesos: null, combat, items: [estella], equipmentTargets,
+    starforceEventStatus: 'verification-required', characterJob: '보우마스터',
+  });
+  assert.equal(result.equipmentRecommendations.some((entry) => entry.recommendationKind === 'starforce'), false);
+  assert.equal(result.equipmentRecommendations.some((entry) => entry.recommendationKind === 'potential'), true);
+  assert.equal(result.blockers.includes('starforceTimedEvent'), true);
+  assert.equal(result.equipmentTargetTrace.starforceEventStatus, 'verification-required');
+});
+
 test('budget recommendation explains excluded unknown-cost and over-budget candidates', async () => {
   const rules = await loadUpgradeRules();
   const targets = { version: 'budget-v1', updatedAt: '2026-09-15', rules: [{
@@ -385,7 +397,7 @@ test('job equipment observations preserve duplicate and non-starforce equipment 
 
 test('recommendation endpoint validates input and returns selected goal context', async () => {
   const rules = await loadUpgradeRules();
-  const app = createApp({ service: { configured: false }, rules, equipmentTargets, goals: { goals: [goal], defaultGoalId: goal.id } });
+  const app = createApp({ service: { configured: false }, starforceEvents: { getStatus: async () => ({ status: 'none' }) }, rules, equipmentTargets, goals: { goals: [goal], defaultGoalId: goal.id } });
   const apiItems = [...items, {
     item_name: '23성 검증 장비', item_equipment_slot: '상의', baseEquipmentLevel: 200, starforce: '23',
     potential_option_grade: null, additional_potential_option_grade: null,

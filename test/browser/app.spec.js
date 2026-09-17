@@ -1,5 +1,34 @@
 import { test, expect } from '@playwright/test';
 
+test.beforeEach(async ({ page }) => {
+  await page.route('**/api/rules/starforce-events', (route) => route.fulfill({ json: {
+    status: 'none', checkedDate: '2026-09-17',
+    sourceUrl: 'https://maplestory.nexon.com/News/Event', candidates: [],
+  } }));
+});
+
+test('recommendation controls show the official timed-event status without horizontal overflow', async ({ page }) => {
+  await page.goto('/');
+  const controls = page.getByLabel('강화 추천 조건');
+  await expect(controls.getByText('기간 이벤트 없음', { exact: true })).toBeVisible();
+  expect(await controls.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+});
+
+test('unverified timed events explain why starforce recommendations and risks are withheld', async ({ page }) => {
+  await page.route('**/api/recommendations', (route) => route.fulfill({ json: {
+    status: 'model-pending',
+    message: '기간 이벤트 검증 전에는 스타포스 비용순 추천을 표시하지 않습니다. 잠재 추천만 확인할 수 있습니다.',
+    coverage: { equipment: 1, starforce: 1, potential: 0, additionalPotential: 0 },
+    blockers: ['starforceTimedEvent'], equipmentRecommendations: [],
+    equipmentTargetTrace: { starforceEventStatus: 'verification-required' },
+    supportedCalculations: { potentialTierUpgrades: [], starforceRisks: [], unsupportedStarforceItems: [] },
+  } }));
+  await page.goto('/');
+  await expect(page.getByText('스타포스 추천 보류', { exact: true })).toBeVisible();
+  await page.getByRole('tab', { name: '스타포스' }).click();
+  await expect(page.getByText('기간 이벤트 확인 전에는 스타포스 비용과 위험 계산을 표시하지 않습니다.')).toBeVisible();
+});
+
 test('potential budget estimate clears on input changes and rejects fractional mesos', async ({ page }, info) => {
   let requestCount = 0;
   let releaseRequest;

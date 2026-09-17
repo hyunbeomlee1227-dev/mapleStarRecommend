@@ -8,6 +8,7 @@ import { loadUpgradeRules } from './rules.js';
 import { createPotentialOptionsService } from './potential-options.js';
 import { loadEquipmentTargets } from './equipment-targets.js';
 import { loadEquipmentBaselines } from './equipment-baselines.js';
+import { createStarforceEventService } from './starforce-events.js';
 
 const production = process.argv.includes('--production') || process.env.NODE_ENV === 'production';
 function integer(name, fallback, minimum = 1) {
@@ -32,7 +33,8 @@ const rules = await loadUpgradeRules();
 const equipmentTargets = await loadEquipmentTargets();
 const equipmentBaselines = await loadEquipmentBaselines();
 const potentialOptions = createPotentialOptionsService();
-const app = createApp({ service, potentialOptions, goals, rules, equipmentTargets, equipmentBaselines, perMinute: integer('LOOKUP_LIMIT_PER_MINUTE', 12), potentialOptionsPerMinute: integer('POTENTIAL_OPTIONS_LIMIT_PER_MINUTE', 30), ...networkSettings() });
+const starforceEvents = createStarforceEventService();
+const app = createApp({ service, potentialOptions, starforceEvents, goals, rules, equipmentTargets, equipmentBaselines, perMinute: integer('LOOKUP_LIMIT_PER_MINUTE', 12), potentialOptionsPerMinute: integer('POTENTIAL_OPTIONS_LIMIT_PER_MINUTE', 30), ...networkSettings() });
 const server = createServer(app);
 let vite;
 if (production) {

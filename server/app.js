@@ -5,8 +5,9 @@ import { assessGoal } from './combat.js';
 import { buildRecommendationPlan, recommendationRequestSchema } from './recommendation.js';
 import { PotentialOptionsError, potentialLineGradesSchema, potentialOptionsQuerySchema, potentialTargetProbabilitySchema } from './potential-options.js';
 import { calculatePotentialBudget, calculatePotentialProgression } from './potential-target.js';
+import { unavailableStarforceEventStatus } from './starforce-events.js';
 
-export function createApp({ service, potentialOptions = null, goals = { goals: [], defaultGoalId: null }, equipmentTargets = { version: null, updatedAt: null, rules: [] }, equipmentBaselines = null, rules = { version: null, updatedAt: null, capabilities: {}, potentialResetCosts: { regular: [], additional: [] }, potentialTierUpgrades: { regular: {}, additional: {} }, starforceOutcomes: {}, starforceCostModel: null, summary: { verified: 0, partial: 0, unsupported: 0, total: 0 } }, perMinute = 12, potentialOptionsPerMinute = 30, trustProxy = false, clientIpHeader = null, now = Date.now, logger = console }) {
+export function createApp({ service, potentialOptions = null, starforceEvents = null, goals = { goals: [], defaultGoalId: null }, equipmentTargets = { version: null, updatedAt: null, rules: [] }, equipmentBaselines = null, rules = { version: null, updatedAt: null, capabilities: {}, potentialResetCosts: { regular: [], additional: [] }, potentialTierUpgrades: { regular: {}, additional: {} }, starforceOutcomes: {}, starforceCostModel: null, summary: { verified: 0, partial: 0, unsupported: 0, total: 0 } }, perMinute = 12, potentialOptionsPerMinute = 30, trustProxy = false, clientIpHeader = null, now = Date.now, logger = console }) {
   const app = express();
   app.disable('x-powered-by');
   if (trustProxy) app.set('trust proxy', trustProxy);
@@ -28,6 +29,10 @@ export function createApp({ service, potentialOptions = null, goals = { goals: [
   app.get('/api/status', (_req, res) => res.json({ configured: service.configured, recommendation: 'unverified' }));
   app.get('/api/goals', (_req, res) => res.json(goals));
   app.get('/api/rules', (_req, res) => res.json(rules));
+  app.get('/api/rules/starforce-events', async (_req, res) => {
+    if (!starforceEvents) return res.status(503).json(unavailableStarforceEventStatus());
+    return res.json(await starforceEvents.getStatus());
+  });
 
   function reservePotentialLookup(req, res) {
     const time = now();
@@ -138,11 +143,12 @@ export function createApp({ service, potentialOptions = null, goals = { goals: [
     if (!snapshot || typeof snapshot !== 'object') return res.status(400).json({ code: 'INVALID_SNAPSHOT', message: '캐릭터를 먼저 조회해 주세요.' });
     res.json({ goalId: goal?.id ?? null, ...assessGoal(snapshot, goal) });
   });
-  app.post('/api/recommendations', express.json({ limit: '64kb' }), (req, res) => {
+  app.post('/api/recommendations', express.json({ limit: '64kb' }), async (req, res) => {
     const parsed = recommendationRequestSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ code: 'INVALID_RECOMMENDATION_INPUT', message: parsed.error.issues[0]?.message || '추천 조건을 확인해 주세요.' });
     const goal = goals.goals.find((candidate) => candidate.id === parsed.data.goalId);
-    res.json(buildRecommendationPlan({ ...parsed.data, goal, rules, equipmentTargets, equipmentBaselines }));
+    const starforceEventStatus = starforceEvents ? (await starforceEvents.getStatus()).status : 'unavailable';
+    res.json(buildRecommendationPlan({ ...parsed.data, goal, rules, equipmentTargets, equipmentBaselines, starforceEventStatus }));
   });
   app.use('/api', (_req, res) => res.status(404).json({ code: 'NOT_FOUND', message: '지원하지 않는 요청입니다.' }));
   return app;

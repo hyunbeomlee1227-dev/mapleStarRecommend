@@ -47,7 +47,7 @@ test('upgrade rule catalog exposes verified costs and blocks incomplete calculat
 test('upgrade rule endpoint returns a public status summary without secrets', async () => {
   const rules = await loadUpgradeRules();
   const goal = { id: 'lotus-hard', boss: '스우', difficulty: '하드' };
-  const app = createApp({ service: { configured: false }, rules, goals: { goals: [goal], defaultGoalId: goal.id } });
+  const app = createApp({ service: { configured: false }, starforceEvents: { getStatus: async () => ({ status: 'none' }) }, rules, goals: { goals: [goal], defaultGoalId: goal.id } });
   const response = await request(app).get('/api/rules');
   assert.equal(response.status, 200);
   assert.equal(response.body.version, rules.version);

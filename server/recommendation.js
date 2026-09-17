@@ -309,7 +309,7 @@ function unsupportedStarforceItems(items) {
   });
 }
 
-export function buildRecommendationPlan({ goal, mode, budgetMesos, combat, characterJob, starforceConditions, items, rules, equipmentTargets, equipmentBaselines }) {
+export function buildRecommendationPlan({ goal, mode, budgetMesos, combat, characterJob, starforceConditions, starforceEventStatus = 'none', items, rules, equipmentTargets, equipmentBaselines }) {
   const ruleTrace = { rulesVersion: rules?.version ?? null, rulesUpdatedAt: rules?.updatedAt ?? null };
   const unsupportedItems = unsupportedStarforceItems(items);
   const supportStatus = { supportedCalculations: { unsupportedStarforceItems: unsupportedItems } };
@@ -328,7 +328,10 @@ export function buildRecommendationPlan({ goal, mode, budgetMesos, combat, chara
   const blockers = rules
     ? Object.entries(rules.capabilities).filter(([, capability]) => !capability.usableForRecommendation).map(([id]) => id)
     : ['upgrade-rules', 'job-damage-model'];
-  const allRecommendations = equipmentRecommendations(goal, items, equipmentTargets, rules, characterJob, resolvedStarforceConditions.calculation);
+  const timedEventVerified = starforceEventStatus === 'none';
+  if (!timedEventVerified) blockers.push('starforceTimedEvent');
+  const allRecommendations = equipmentRecommendations(goal, items, equipmentTargets, rules, characterJob, resolvedStarforceConditions.calculation)
+    .filter((candidate) => timedEventVerified || candidate.recommendationKind !== 'starforce');
   let remainingBudget = budgetMesos;
   let unknownCostCandidates = 0;
   let overBudgetCandidates = 0;
@@ -348,7 +351,9 @@ export function buildRecommendationPlan({ goal, mode, budgetMesos, combat, chara
     : allRecommendations;
   return {
     status: 'model-pending',
-    message: '스타포스는 목표 별 1개당 기대 메소가 낮은 순서입니다. 최종뎀 효율은 아직 반영하지 않습니다.',
+    message: timedEventVerified
+      ? '스타포스는 목표 별 1개당 기대 메소가 낮은 순서입니다. 최종뎀 효율은 아직 반영하지 않습니다.'
+      : '기간 이벤트 검증 전에는 스타포스 비용순 추천을 표시하지 않습니다. 잠재 추천만 확인할 수 있습니다.',
     mode,
     budgetMesos,
     coverage,
@@ -370,11 +375,12 @@ export function buildRecommendationPlan({ goal, mode, budgetMesos, combat, chara
       } : null,
       starforceConditions: resolvedStarforceConditions.selected,
       starforceDiscountRate: resolvedStarforceConditions.discountRate,
+      starforceEventStatus,
     },
     jobEquipmentReference: equipmentReference,
     supportedCalculations: {
       potentialTierUpgrades: potentialTierUpgrades(items, rules),
-      starforceRisks: starforceRisks(items, rules, resolvedStarforceConditions.calculation),
+      starforceRisks: timedEventVerified ? starforceRisks(items, rules, resolvedStarforceConditions.calculation) : [],
       unsupportedStarforceItems: unsupportedItems,
     },
     ...ruleTrace,
