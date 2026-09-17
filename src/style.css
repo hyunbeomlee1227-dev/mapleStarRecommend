@@ -52,3 +52,7 @@
 .potential-evidence p{margin-top:6px;font-size:10px;line-height:1.7}
 .recommendation-calculate{display:flex;align-items:center;gap:6px;margin-top:10px;padding:7px 10px;border:1px solid var(--line);border-radius:4px;background:#fff;color:var(--accent);font-size:11px;font-weight:600;cursor:pointer}
 .recommendation-calculate:disabled{opacity:.5;cursor:not-allowed}
+.potential-budget{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:14px;font-size:11px}
+.potential-budget input{min-width:0;width:180px;max-width:60%;padding:8px;border:1px solid var(--line);border-radius:4px;background:#fff}
+.potential-budget-result{margin-top:12px;padding:12px 0;border-top:1px solid var(--line);font-size:11px;line-height:1.7;overflow-wrap:anywhere}
+.potential-budget-result p{margin-top:5px;color:var(--muted)}

@@ -1,5 +1,46 @@
 import { test, expect } from '@playwright/test';
 
+test('potential budget estimate clears on input changes and rejects fractional mesos', async ({ page }, info) => {
+  let requestCount = 0;
+  let releaseRequest;
+  let finishRequest;
+  const delayedRequest = new Promise((resolve) => { releaseRequest = resolve; });
+  const finishedRequest = new Promise((resolve) => { finishRequest = resolve; });
+  await page.route('**/api/rules/potential-options?*', (route) => route.fulfill({ json: {
+    grade: '레전드리', part: '무기', levelBand: '120~200', cached: false,
+    sourceUrl: 'https://maplestory.nexon.com/Guide/OtherProbability/cube/black',
+    lines: [1, 2, 3].map(() => [{ option: '공격력 +12%', probability: 0.1 }]),
+  } }));
+  await page.route('**/api/rules/potential-target-probability', async (route) => {
+    requestCount += 1;
+    expect(route.request().postDataJSON().budgetMesos).toBe(90_000_000);
+    if (requestCount === 2) await delayedRequest;
+    try { await route.fulfill({ json: {
+      probability: 0.25, expectedResets: 4, expectedMeso: 180_000_000,
+      budget: { status: 'supported', maximumResets: 2, budgetMesos: 90_000_000, probability: 0.4375 },
+    } }); } finally { if (requestCount === 2) finishRequest(); }
+  });
+  await page.goto('/');
+  if (info.project.name === 'mobile') await page.getByRole('button', { name: '아케인셰이드 투핸드소드 상세 보기' }).click();
+  await page.getByRole('button', { name: '공식 잠재 옵션표 보기' }).click();
+  const dialog = page.getByRole('dialog', { name: '공식 잠재 옵션표' });
+  await dialog.getByRole('checkbox', { name: '공격력 +12%' }).check();
+  await dialog.getByLabel('잠재 계산 예산 (메소)').fill('90000000');
+  await dialog.getByRole('button', { name: '목표 확률 계산' }).click();
+  await expect(dialog.getByLabel('잠재 예산 성공 확률')).toContainText('43.75%');
+  await expect(dialog.getByLabel('잠재 예산 성공 확률')).toContainText('최대 2회');
+  await dialog.getByLabel('잠재 예산 성공 확률').screenshot({ path: `test-results/potential-budget-${info.project.name}.png` });
+  await dialog.getByRole('button', { name: '목표 확률 계산' }).click();
+  await expect.poll(() => requestCount).toBe(2);
+  await dialog.getByLabel('잠재 계산 예산 (메소)').fill('1.5');
+  releaseRequest();
+  await finishedRequest;
+  await expect(dialog.getByLabel('잠재 예산 성공 확률')).toHaveCount(0);
+  await expect(dialog.getByRole('button', { name: '목표 확률 계산' })).toBeDisabled();
+  await expect(dialog.getByRole('alert')).toContainText('정수 메소');
+  expect(await dialog.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+});
+
 test('potential recommendation opens the matching target calculator and detail reopens its defaults', async ({ page }, info) => {
   let targetPayload;
   await page.route('**/api/rules/potential-target-probability', (route) => {

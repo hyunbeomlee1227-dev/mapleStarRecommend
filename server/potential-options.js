@@ -40,6 +40,7 @@ export const potentialTargetProbabilitySchema = potentialOptionsQuerySchema.exte
     .refine((options) => new Set(options.map(normalizePotentialOption)).size === options.length, '목표 옵션은 중복해서 선택할 수 없습니다.'),
   minimumMatches: z.number().int().min(1).max(3),
   currentOptions: z.array(z.string().min(1).max(500)).length(3).optional(),
+  budgetMesos: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER).nullable().default(null),
 }).superRefine((value, context) => {
   if (!isPotentialGradeAtLeast(value.targetGrade, value.grade)) {
     context.addIssue({ code: 'custom', path: ['targetGrade'], message: '목표 잠재 등급은 현재 등급보다 낮을 수 없습니다.' });

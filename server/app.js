@@ -4,7 +4,7 @@ import { LookupError } from './nexon.js';
 import { assessGoal } from './combat.js';
 import { buildRecommendationPlan, recommendationRequestSchema } from './recommendation.js';
 import { PotentialOptionsError, potentialLineGradesSchema, potentialOptionsQuerySchema, potentialTargetProbabilitySchema } from './potential-options.js';
-import { calculatePotentialProgression } from './potential-target.js';
+import { calculatePotentialBudget, calculatePotentialProgression } from './potential-target.js';
 
 export function createApp({ service, potentialOptions = null, goals = { goals: [], defaultGoalId: null }, equipmentTargets = { version: null, updatedAt: null, rules: [] }, equipmentBaselines = null, rules = { version: null, updatedAt: null, capabilities: {}, potentialResetCosts: { regular: [], additional: [] }, potentialTierUpgrades: { regular: {}, additional: {} }, starforceOutcomes: {}, starforceCostModel: null, summary: { verified: 0, partial: 0, unsupported: 0, total: 0 } }, perMinute = 12, potentialOptionsPerMinute = 30, trustProxy = false, clientIpHeader = null, now = Date.now, logger = console }) {
   const app = express();
@@ -100,6 +100,12 @@ export function createApp({ service, potentialOptions = null, goals = { goals: [
         resetCost,
         targetGradeExpectedResets: result.expectedResets,
         ...progression,
+        budget: calculatePotentialBudget({
+          currentGrade: parsed.data.grade, targetGrade: parsed.data.targetGrade,
+          budgetMesos: parsed.data.budgetMesos, resetCost,
+          probability: result.probability, alreadySatisfied: result.alreadySatisfied,
+          conditionedOnDifferentResult: result.conditionedOnDifferentResult,
+        }),
       });
     } catch (error) {
       if (error instanceof PotentialOptionsError) return res.status(error.status).json({ code: error.code, message: error.message });

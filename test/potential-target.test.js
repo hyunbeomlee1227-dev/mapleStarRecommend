@@ -1,6 +1,31 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { calculatePotentialProgression, calculatePotentialTargetProbability, expectedAttemptsWithGuarantee } from '../server/potential-target.js';
+import { calculatePotentialBudget, calculatePotentialProgression, calculatePotentialTargetProbability, expectedAttemptsWithGuarantee } from '../server/potential-target.js';
+
+test('legendary budget success probability uses whole affordable attempts, not average cost', () => {
+  const input = { currentGrade: 'legendary', targetGrade: 'legendary', probability: 0.1, resetCost: 40, budgetMesos: 119, conditionedOnDifferentResult: true };
+  assert.deepEqual(calculatePotentialBudget(input), {
+    status: 'supported', budgetMesos: 119, maximumResets: 2, probability: 0.19,
+  });
+  assert.equal(calculatePotentialBudget({ ...input, budgetMesos: 39 }).probability, 0);
+  assert.equal(calculatePotentialBudget({ ...input, budgetMesos: 40 }).maximumResets, 1);
+  assert.equal(calculatePotentialBudget({ ...input, probability: 0 }).probability, 0);
+  assert.equal(calculatePotentialBudget({ ...input, probability: 1 }).probability, 1);
+  assert.equal(calculatePotentialBudget({ ...input, alreadySatisfied: true, budgetMesos: 0 }).probability, 1);
+  assert.equal(calculatePotentialBudget({ ...input, budgetMesos: null }), null);
+});
+
+test('budget probability refuses tier progression and preserves tiny probabilities', () => {
+  const input = { currentGrade: 'unique', targetGrade: 'legendary', probability: 0.1, resetCost: 40, budgetMesos: 400, conditionedOnDifferentResult: true };
+  const unsupported = calculatePotentialBudget(input);
+  assert.equal(unsupported.status, 'unsupported');
+  assert.equal(unsupported.probability, null);
+  assert.equal(unsupported.maximumResets, null);
+  assert.equal(calculatePotentialBudget({ ...input, targetGrade: 'unique', alreadySatisfied: true }).status, 'unsupported');
+  const tiny = calculatePotentialBudget({ ...input, currentGrade: 'legendary', probability: 1e-20 });
+  assert.ok(Math.abs(tiny.probability / 1e-19 - 1) < 1e-12);
+  assert.equal(calculatePotentialBudget({ ...input, currentGrade: 'legendary', conditionedOnDifferentResult: false }).status, 'unsupported');
+});
 
 const usefulSkill = '<쓸만한 윈드 부스터> 스킬 사용 가능';
 const stat = 'STR +12%';

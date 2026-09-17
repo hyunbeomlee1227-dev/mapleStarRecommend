@@ -41,6 +41,9 @@ export default function PotentialOptionsDialog({ item, open, initialTarget = nul
   const [minimumMatches, setMinimumMatches] = useState(1);
   const [tierRemainingAttempts, setTierRemainingAttempts] = useState({});
   const [calculation, setCalculation] = useState({ status: 'idle' });
+  const [budget, setBudget] = useState('');
+  const budgetMesos = budget.trim() === '' ? null : Number(budget);
+  const budgetValid = budgetMesos === null || (Number.isSafeInteger(budgetMesos) && budgetMesos >= 0);
   const regularAvailable = Boolean(potentialQueryFor(item, 'regular'));
   const additionalAvailable = Boolean(potentialQueryFor(item, 'additional'));
 
@@ -51,6 +54,7 @@ export default function PotentialOptionsDialog({ item, open, initialTarget = nul
     setType(initialType);
     setSelectedTargetGrade(initialTarget?.grade ?? null);
     setTierRemainingAttempts({});
+    setBudget('');
     dialogRef.current?.showModal();
   }, [open, item, regularAvailable, initialTarget]);
 
@@ -87,7 +91,7 @@ export default function PotentialOptionsDialog({ item, open, initialTarget = nul
   async function calculateTarget() {
     const currentQuery = potentialQueryFor(item, type);
     const query = potentialQueryFor(item, type, selectedTargetGrade);
-    if (!currentQuery || !query || targetOptions.length === 0) return;
+    if (!currentQuery || !query || targetOptions.length === 0 || !budgetValid) return;
     calculationControllerRef.current?.abort();
     const controller = new AbortController();
     calculationControllerRef.current = controller;
@@ -103,6 +107,7 @@ export default function PotentialOptionsDialog({ item, open, initialTarget = nul
           targetGrade: query.grade,
           targetOptions,
           minimumMatches,
+          budgetMesos,
           tierRemainingAttempts: Object.fromEntries(progressionGrades.map((grade) => [
             grade,
             Number(tierRemainingAttempts[grade] ?? result.body.tierRules[grade].guaranteeAttempts),
@@ -154,7 +159,10 @@ export default function PotentialOptionsDialog({ item, open, initialTarget = nul
           return rule && <label key={grade}><span>{potentialGradeLabels[grade]}에서 {potentialGradeLabels[rule.nextGrade]} 보장까지 남은 횟수<small>게임 내 퀘스트 알림이에서 확인 · 최대 {rule.guaranteeAttempts}회</small></span><input type="number" min="1" max={rule.guaranteeAttempts} step="1" value={tierRemainingAttempts[grade] ?? rule.guaranteeAttempts} aria-label={`${potentialGradeLabels[grade]}에서 ${potentialGradeLabels[rule.nextGrade]} 보장까지 남은 횟수`} onChange={(event) => { setTierRemainingAttempts((counts) => ({ ...counts, [grade]: event.target.value })); setCalculation({ status: 'idle' }); }} /></label>;
         })}</div>}
         <div className="potential-target-options">{availableOptions.map((option) => <label key={option}><input type="checkbox" checked={targetOptions.includes(option)} onChange={() => toggleTarget(option)} /><span>{option}</span></label>)}</div>
-        <button className="potential-calculate" disabled={targetOptions.length === 0 || !tierInputsValid || calculation.status === 'loading'} onClick={calculateTarget}>{calculation.status === 'loading' ? <LoaderCircle className="spin" /> : <Target />}목표 확률 계산</button>
+        <label className="potential-budget"><span>예산 (메소)</span><input aria-label="잠재 계산 예산 (메소)" type="number" min="0" max={Number.MAX_SAFE_INTEGER} step="1" value={budget} onChange={(event) => { calculationControllerRef.current?.abort(); setBudget(event.target.value); setCalculation({ status: 'idle' }); }} /></label>
+        {!budgetValid && <p role="alert" className="potential-error">예산은 0 이상의 안전한 정수 메소로 입력해 주세요.</p>}
+        <button className="potential-calculate" disabled={targetOptions.length === 0 || !tierInputsValid || !budgetValid || calculation.status === 'loading'} onClick={calculateTarget}>{calculation.status === 'loading' ? <LoaderCircle className="spin" /> : <Target />}목표 확률 계산</button>
+        {calculation.status === 'ready' && calculation.body.budget && <div className="potential-budget-result" aria-label="잠재 예산 성공 확률">{calculation.body.budget.status === 'supported' ? <><strong>예산 내 성공 확률 {percent(calculation.body.budget.probability)}</strong><p>최대 {mesos.format(calculation.body.budget.maximumResets)}회 재설정 · {mesos.format(calculation.body.budget.budgetMesos)} 메소</p><p>목표 달성 시 중단하고, 미달이면 현재 옵션을 보존하는 조건입니다. 확률은 성공 보장이 아닙니다.</p></> : <p>{calculation.body.budget.message}</p>}</div>}
         {calculation.status === 'error' && <div className="potential-error" role="alert">{calculation.message}</div>}
         {calculation.status === 'ready' && <div className="potential-target-result" aria-label="잠재 목표 계산 결과"><p><span>{calculation.body.alreadySatisfied ? '현재 상태' : '목표 등급 1회 확률'}</span><strong>{calculation.body.alreadySatisfied ? '목표 달성' : percent(calculation.body.probability)}</strong></p><p><span>총 평균 재설정</span><strong>{calculation.body.expectedResets === null ? '달성 불가' : `${calculation.body.expectedResets.toFixed(2)}회`}</strong></p><p><span>총 기대 메소</span><strong>{calculation.body.expectedMeso === null ? '계산 불가' : `${mesos.format(calculation.body.expectedMeso)} 메소`}</strong></p></div>}
       </section>

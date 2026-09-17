@@ -1,5 +1,25 @@
 import { potentialGradeOrder } from '../shared/potential.js';
 
+export function calculatePotentialBudget({ currentGrade, targetGrade, probability, resetCost, budgetMesos = null, alreadySatisfied = false, conditionedOnDifferentResult = false }) {
+  if (budgetMesos === null) return null;
+  if (!Number.isSafeInteger(budgetMesos) || budgetMesos < 0 || !Number.isSafeInteger(resetCost) || resetCost <= 0 || !Number.isFinite(probability) || probability < 0 || probability > 1) {
+    throw new Error('잠재 예산 또는 확률 기준값이 올바르지 않습니다.');
+  }
+  if (currentGrade !== 'legendary' || targetGrade !== 'legendary' || !conditionedOnDifferentResult) {
+    return {
+      status: 'unsupported', budgetMesos, maximumResets: null, probability: null,
+      message: currentGrade !== 'legendary' || targetGrade !== 'legendary'
+        ? '등급 변화가 포함된 예산 내 성공 확률은 아직 지원하지 않습니다.'
+        : '현재 세 줄의 동일 결과 재추첨 보정이 확인되지 않아 예산 내 성공 확률을 계산하지 않습니다.',
+    };
+  }
+  const maximumResets = Math.floor(budgetMesos / resetCost);
+  // log1p/expm1 avoid losing very small probabilities through subtraction.
+  const successProbability = alreadySatisfied ? 1 : maximumResets === 0 ? 0
+    : probability === 1 ? 1 : -Math.expm1(maximumResets * Math.log1p(-probability));
+  return { status: 'supported', budgetMesos, maximumResets, probability: Math.max(0, Math.min(1, successProbability)) };
+}
+
 export function normalizePotentialOption(option) {
   return String(option ?? '').replace(/\s*:\s*/g, ' ').replace(/\s+/g, ' ').trim();
 }

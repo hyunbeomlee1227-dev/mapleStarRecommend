@@ -150,6 +150,15 @@ test('potential target endpoint combines lower-tier progression and target optio
   assert.equal(response.body.targetGrade, 'legendary');
   assert.equal(response.body.tierSteps.length, 1);
   assert.equal(response.body.guaranteeApplied, true);
+  assert.equal(response.body.budget, null);
+  const budgetResult = await request(app).post('/api/rules/potential-target-probability').send({ ...body, grade: 'legendary', budgetMesos: 90_000_000 });
+  assert.deepEqual(budgetResult.body.budget, { status: 'supported', budgetMesos: 90_000_000, maximumResets: 2, probability: 0.4375 });
+  const tierBudget = await request(app).post('/api/rules/potential-target-probability').send({ ...body, budgetMesos: 90_000_000 });
+  assert.equal(tierBudget.body.budget.status, 'unsupported');
+  for (const budgetMesos of [-1, 1.5, Number.MAX_SAFE_INTEGER + 1]) {
+    const badBudget = await request(app).post('/api/rules/potential-target-probability').send({ ...body, budgetMesos });
+    assert.equal(badBudget.status, 400);
+  }
 
   const invalid = await request(app).post('/api/rules/potential-target-probability').send({ ...body, grade: 'legendary', targetGrade: 'unique' });
   assert.equal(invalid.status, 400);
