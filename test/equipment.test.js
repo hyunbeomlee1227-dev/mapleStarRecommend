@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { supportsStandardStarforce, supportsStarforce } from '../shared/equipment.js';
+import { standardStarforceSupport, supportsStandardStarforce, supportsStarforce } from '../shared/equipment.js';
 
 test('starforce support handles Astra secondary weapons and special rings', () => {
   assert.equal(supportsStarforce({ item_name: '아스트라 여의보주', item_equipment_slot: '보조무기', item_equipment_part: '보조무기', starforce: '18' }), true);
@@ -14,4 +14,17 @@ test('superior equipment keeps its stars but is excluded from standard calculati
   assert.equal(supportsStarforce(superior), true);
   assert.equal(supportsStandardStarforce(superior), false);
   assert.equal(supportsStandardStarforce({ item_name: '앱솔랩스 나이트케이프', item_equipment_slot: '망토', starforce: '17' }), true);
+});
+
+test('Zero weapons keep their stars but use a separate unsupported calculation status', () => {
+  for (const itemName of ['데스티니 라피스', '데스티니 라즐리', '라피스 9형', '라즐리 9형']) {
+    const item = { item_name: itemName, item_equipment_slot: '무기', starforce: '22' };
+    assert.equal(supportsStarforce(item), true);
+    assert.equal(supportsStandardStarforce(item), false);
+    assert.deepEqual(standardStarforceSupport(item), {
+      supported: false,
+      code: 'zero-weapon',
+      message: '제로 무기는 전용 강화 규칙 검증 전 일반 스타포스 비용 계산에서 제외합니다.',
+    });
+  }
 });

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { supportsStandardStarforce } from '../shared/equipment.js';
+import { standardStarforceSupport, supportsStandardStarforce, supportsStarforce } from '../shared/equipment.js';
 import { calculateNextStarCost, calculateStarforceTargetCost, starforceOutcomeForConditions } from './starforce.js';
 
 const itemSchema = z.object({
@@ -294,8 +294,25 @@ function equipmentRecommendations(goal, items, equipmentTargets, rules, characte
   return [...starforce, ...potential];
 }
 
+function unsupportedStarforceItems(items) {
+  return items.flatMap((item) => {
+    if (!supportsStarforce(item)) return [];
+    const support = standardStarforceSupport(item);
+    if (support.supported) return [];
+    return [{
+      itemName: item.item_name,
+      slot: item.item_equipment_slot,
+      currentStar: Number(item.starforce),
+      code: support.code,
+      message: support.message,
+    }];
+  });
+}
+
 export function buildRecommendationPlan({ goal, mode, budgetMesos, combat, characterJob, starforceConditions, items, rules, equipmentTargets, equipmentBaselines }) {
   const ruleTrace = { rulesVersion: rules?.version ?? null, rulesUpdatedAt: rules?.updatedAt ?? null };
+  const unsupportedItems = unsupportedStarforceItems(items);
+  const supportStatus = { supportedCalculations: { unsupportedStarforceItems: unsupportedItems } };
   const coverage = {
     equipment: items.length,
     starforce: items.filter(supportsStandardStarforce).length,
@@ -304,9 +321,9 @@ export function buildRecommendationPlan({ goal, mode, budgetMesos, combat, chara
   };
   const equipmentReference = jobEquipmentReference(characterJob, items, equipmentBaselines);
   const resolvedStarforceConditions = resolveStarforceConditions(rules, starforceConditions);
-  if (!goal) return { status: 'unknown-goal', message: '지원하는 목표 보스를 선택해 주세요.', mode, budgetMesos, coverage, blockers: ['goal'], jobEquipmentReference: equipmentReference, ...ruleTrace };
+  if (!goal) return { status: 'unknown-goal', message: '지원하는 목표 보스를 선택해 주세요.', mode, budgetMesos, coverage, blockers: ['goal'], jobEquipmentReference: equipmentReference, ...supportStatus, ...ruleTrace };
   if (combat.readiness !== 'snapshot-ready') {
-    return { status: 'insufficient-data', message: combat.message || '보스전 비교에 필요한 능력치가 부족합니다.', mode, budgetMesos, coverage, blockers: ['combat-snapshot'], jobEquipmentReference: equipmentReference, ...ruleTrace };
+    return { status: 'insufficient-data', message: combat.message || '보스전 비교에 필요한 능력치가 부족합니다.', mode, budgetMesos, coverage, blockers: ['combat-snapshot'], jobEquipmentReference: equipmentReference, ...supportStatus, ...ruleTrace };
   }
   const blockers = rules
     ? Object.entries(rules.capabilities).filter(([, capability]) => !capability.usableForRecommendation).map(([id]) => id)
@@ -358,6 +375,7 @@ export function buildRecommendationPlan({ goal, mode, budgetMesos, combat, chara
     supportedCalculations: {
       potentialTierUpgrades: potentialTierUpgrades(items, rules),
       starforceRisks: starforceRisks(items, rules, resolvedStarforceConditions.calculation),
+      unsupportedStarforceItems: unsupportedItems,
     },
     ...ruleTrace,
     goal: { id: goal.id, boss: goal.boss, difficulty: goal.difficulty },

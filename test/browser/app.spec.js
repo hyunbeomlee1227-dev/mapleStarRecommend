@@ -114,6 +114,27 @@ test('unmatched potential recommendation cannot open a calculator', async ({ pag
   await expect(page.getByRole('dialog', { name: '공식 잠재 옵션표' })).not.toBeVisible();
 });
 
+test('Zero weapon keeps starforce visible while standard cost support is explained', async ({ page }) => {
+  await page.route('**/api/recommendations', (route) => route.fulfill({ json: {
+    status: 'model-pending', message: '특수 장비 검증', equipmentRecommendations: [],
+    coverage: { equipment: 1, starforce: 0, potential: 0, additionalPotential: 0 },
+    supportedCalculations: {
+      potentialTierUpgrades: [], starforceRisks: [],
+      unsupportedStarforceItems: [{
+        itemName: '데스티니 라즐리', slot: '무기', currentStar: 22, code: 'zero-weapon',
+        message: '제로 무기는 전용 강화 규칙 검증 전 일반 스타포스 비용 계산에서 제외합니다.',
+      }],
+    },
+  } }));
+  await page.goto('/');
+  await page.getByRole('tab', { name: '스타포스', exact: true }).click();
+  const unsupported = page.getByLabel('스타포스 계산 미지원 장비');
+  await expect(unsupported).toContainText('데스티니 라즐리');
+  await expect(unsupported).toContainText('무기 · 22성');
+  await expect(unsupported).toContainText('제로 무기는 전용 강화 규칙 검증 전 일반 스타포스 비용 계산에서 제외합니다.');
+  expect(await unsupported.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+});
+
 test('budget results explain exclusions without promising success', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: '예산 내 추천' }).click();
@@ -191,7 +212,7 @@ test('equipment browsing, filters, detail and status remain usable', async ({ pa
   expect(await page.locator('.analysis-tabs').evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
   expect(await page.locator('.tier-table').evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
   await page.getByRole('tab', { name: '스타포스', exact: true }).click();
-  await expect(page.getByText('9개 장비 표시', { exact: true })).toBeVisible();
+  await expect(page.getByText('9개 장비 계산 가능', { exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: '스타포스 강화' })).toBeVisible();
   await expect(page.getByText('16.85%', { exact: true }).first()).toBeVisible();
   const gloveStarforce = page.locator('.starforce-table .tier-row').filter({ hasText: '아케인셰이드 나이트글러브' });

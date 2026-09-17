@@ -304,6 +304,33 @@ test('superior equipment is excluded from standard starforce recommendations', a
   assert.equal(result.equipmentRecommendations.some((entry) => entry.recommendationKind === 'starforce'), false);
 });
 
+test('special starforce equipment reports why standard cost calculation is unsupported', async () => {
+  const rules = await loadUpgradeRules();
+  const specialItems = [
+    { item_name: '데스티니 라즐리', item_equipment_slot: '무기', baseEquipmentLevel: 200, starforce: '22' },
+    { item_name: '타일런트 히아데스 망토', item_description: '슈페리얼 장비', item_equipment_slot: '망토', baseEquipmentLevel: 150, starforce: '10' },
+  ];
+  const result = buildRecommendationPlan({ goal, mode: 'all', budgetMesos: null, combat, rules, items: specialItems });
+
+  assert.equal(result.supportedCalculations.starforceRisks.length, 0);
+  assert.deepEqual(result.supportedCalculations.unsupportedStarforceItems, [
+    {
+      itemName: '데스티니 라즐리', slot: '무기', currentStar: 22, code: 'zero-weapon',
+      message: '제로 무기는 전용 강화 규칙 검증 전 일반 스타포스 비용 계산에서 제외합니다.',
+    },
+    {
+      itemName: '타일런트 히아데스 망토', slot: '망토', currentStar: 10, code: 'superior-equipment',
+      message: '슈페리얼 장비는 전용 강화 규칙 검증 전 일반 스타포스 비용 계산에서 제외합니다.',
+    },
+  ]);
+
+  const missingCombat = buildRecommendationPlan({
+    goal, mode: 'all', budgetMesos: null, combat: { readiness: 'missing', message: '능력치 부족' }, rules, items: specialItems,
+  });
+  assert.equal(missingCombat.status, 'insufficient-data');
+  assert.deepEqual(missingCombat.supportedCalculations.unsupportedStarforceItems, result.supportedCalculations.unsupportedStarforceItems);
+});
+
 test('equipment family targets evaluate every matching equipped item', () => {
   const familyTargets = {
     version: 'family-v1', updatedAt: '2026-09-11',
